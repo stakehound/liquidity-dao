@@ -1,0 +1,27 @@
+
+# use Ganache's forked mainnet mode as the default network
+networks:
+  default: mainnet-fork
+  mainnet-fork:
+    explorer: https://api.etherscan.io/api
+
+project_structure:
+  contracts: contracts
+  # contracts: contracts
+
+# automatically fetch contract sources from Etherscan
+autofetch_sources: True
+
+# require OpenZepplin Contracts
+dependencies:
+  - OpenZeppelin/openzeppelin-contracts@3.2.0
+
+reports:
+  exclude_paths:
+    - contracts/test/Token.sol
+  exclude_contracts:
+    - SafeMathUpgradeable
+    - AccessControlUpgradeable
+    - EnumerableSetUpgradeable
+    - SafeERC20Upgradeable
+    - ERC20Upgradeable
