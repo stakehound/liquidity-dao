@@ -53,6 +53,11 @@ interface IStakedToken {
     function totalShares() external view returns (uint256);
 
     /**
+     * @return The supply controller
+     */
+    function supplyController() external view returns (address);
+
+    /**
      * @param who The address to query.
      * @return The balance of the specified address.
      */
@@ -63,7 +68,7 @@ interface IStakedToken {
      * @return The balance of the specified address in shares.
      */
     function sharesOf(address who) external view returns (uint256);
-    
+
     /**
      * @dev Transfer tokens to a specified address.
      * @param to The address to transfer to.
@@ -105,7 +110,6 @@ interface IStakedToken {
      */
     function approve(address spender, uint256 value) external returns (bool);
 
-
     /**
      * @dev Increase the amount of tokens that an owner has allowed to a spender.
      * This method should be used instead of approve() to avoid the double approval vulnerability
@@ -142,7 +146,6 @@ interface IStakedToken {
      */
     function burn(uint256 amount) external;
 
-
     // Downstream transactions
 
     /**
@@ -161,7 +164,7 @@ interface IStakedToken {
      * @param data Transaction data payload
      * @return index of the newly added transaction
      */
-    function addTransaction(address destination, bytes memory data) external returns(uint256);
+    function addTransaction(address destination, bytes memory data) external returns (uint256);
 
     /**
      * @param index Index of transaction to remove.

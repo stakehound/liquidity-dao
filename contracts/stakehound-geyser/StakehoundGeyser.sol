@@ -8,6 +8,7 @@ import "deps/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.s
 import "deps/@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import "deps/@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "deps/@openzeppelin/contracts-upgradeable/utils/EnumerableSetUpgradeable.sol";
+import "interfaces/stakehound/IStakedToken.sol";
 
 /**
  * @title Stakehound Geyser
@@ -22,7 +23,7 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     struct UnlockSchedule {
-        uint256 initialLocked;
+        uint256 sharesLocked;
         uint256 endAtSec;
         uint256 durationSec;
         uint256 startTime;
@@ -35,33 +36,30 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
 
     uint256 public totalStaked;
 
-    IERC20Upgradeable internal _stakingToken;
+    IStakedToken internal _stakingToken;
     EnumerableSetUpgradeable.AddressSet distributionTokens;
 
     mapping(address => uint256) internal _userTotals;
     mapping(address => UnlockSchedule[]) public unlockSchedules;
 
-    event Staked(address indexed user, uint256 amount, uint256 total, uint256 indexed timestamp, uint256 indexed blockNumber, bytes data);
-    event Unstaked(address indexed user, uint256 amount, uint256 total, uint256 indexed timestamp, uint256 indexed blockNumber, bytes data);
-    event UnlockScheduleSet(address token, uint256 index, uint256 initialLocked, uint256 durationSec, uint256 startTime, uint256 endTime);
-    event TokensLocked(
-        address indexed token,
-        uint256 amount,
+    event Staked(address indexed user, uint256 shares, uint256 total, uint256 indexed timestamp);
+    event Unstaked(address indexed user, uint256 shares, uint256 total, uint256 indexed timestamp);
+    event UnlockScheduleSet(
+        address token,
+        uint256 index,
+        uint256 sharesLocked,
         uint256 durationSec,
         uint256 startTime,
         uint256 endTime,
-        uint256 indexed timestamp,
-        bytes data
+        uint256 indexed timestamp
     );
 
     /**
      * @param stakingToken_ The token users deposit as stake.
-     * @param initialDistributionToken_ The token users receive as they unstake.
      * @param globalStartTime_ Timestamp after which unlock schedules and staking can begin.
      */
     function initialize(
-        IERC20Upgradeable stakingToken_,
-        address initialDistributionToken_,
+        IStakedToken stakingToken_,
         uint256 globalStartTime_,
         address initialAdmin_,
         address initialTokenLocker_
@@ -72,7 +70,6 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         _setupRole(TOKEN_LOCKER_ROLE, initialTokenLocker_);
 
         _stakingToken = stakingToken_;
-        distributionTokens.add(initialDistributionToken_);
 
         globalStartTime = globalStartTime_;
     }
@@ -80,7 +77,7 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     /// ===== Modifiers =====
 
     function _onlyAfterStart() internal {
-        require(now >= globalStartTime, "BadgerGeyser: Distribution not started");
+        require(now >= globalStartTime, "StakehoundGeyser: Distribution not started");
     }
 
     function _onlyAdmin() internal {
@@ -103,7 +100,7 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     /**
      * @return The token users deposit as stake.
      */
-    function getStakingToken() public view returns (IERC20Upgradeable) {
+    function getStakingToken() public view returns (IStakedToken) {
         return _stakingToken;
     }
 
@@ -188,20 +185,6 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         distributionTokens.add(token);
     }
 
-    function modifyTokenLock(
-        address token,
-        uint256 index,
-        uint256 amount,
-        uint256 durationSec,
-        uint256 startTime
-    ) external {
-        _onlyTokenLocker();
-        require(startTime >= globalStartTime, "BadgerGeyser: Schedule cannot start before global start time");
-        require(distributionTokens.contains(token), "BadgerGeyser: Token not approved by admin");
-
-        _modifyTokenLock(token, index, amount, durationSec, startTime);
-    }
-
     /// ===== Permissioned Actions: Token Lockers =====
 
     /**
@@ -220,8 +203,8 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         uint256 startTime
     ) external {
         _onlyTokenLocker();
-        require(startTime >= globalStartTime, "BadgerGeyser: Schedule cannot start before global start time");
-        require(distributionTokens.contains(token), "BadgerGeyser: Token not approved by admin");
+        require(startTime >= globalStartTime, "StakehoundGeyser: Schedule cannot start before global start time");
+        require(distributionTokens.contains(token), "StakehoundGeyser: Token not approved by admin");
 
         _signalTokenLock(token, amount, durationSec, startTime);
     }
@@ -239,18 +222,25 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         address beneficiary,
         uint256 amount
     ) internal {
-        require(amount > 0, "BadgerGeyser: stake amount is zero");
-        require(beneficiary != address(0), "BadgerGeyser: beneficiary is zero address");
+        require(amount > 0, "StakehoundGeyser: stake amount is zero");
+        require(beneficiary != address(0), "StakehoundGeyser: beneficiary is zero address");
+
+        // TODO: re-entrancy guard if you launch with shady tokens
+        uint256 sharesBefore = _stakingToken.sharesOf(address(this));
+
+        IERC20Upgradeable(address(_stakingToken)).safeTransferFrom(staker, address(this), amount);
+        uint256 sharesAfter = _stakingToken.sharesOf(address(this));
+        uint256 shares = sharesAfter.sub(sharesBefore);
 
         // 1. User Accounting
-        _userTotals[beneficiary] = _userTotals[beneficiary].add(amount);
+        _userTotals[beneficiary] = _userTotals[beneficiary].add(shares);
 
         // 2. Global Accounting
-        totalStaked = totalStaked.add(amount);
+        totalStaked = totalStaked.add(shares);
 
-        _stakingToken.safeTransferFrom(staker, address(this), amount);
+        // require(totalStaked == sharesAfter);
 
-        emit Staked(beneficiary, amount, totalStakedFor(beneficiary), now, block.number, "");
+        emit Staked(beneficiary, shares, totalStakedFor(beneficiary), now);
     }
 
     /**
@@ -260,19 +250,25 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
      */
     function _unstakeFor(address user, uint256 amount) internal {
         // checks
-        require(amount > 0, "BadgerGeyser: unstake amount is zero");
-        require(totalStakedFor(user) >= amount, "BadgerGeyser: unstake amount is greater than total user stakes");
+        require(amount > 0, "StakehoundGeyser: unstake amount is zero");
+        require(totalStakedFor(user) >= amount, "StakehoundGeyser: unstake amount is greater than total user stakes");
 
-        // 1. User Accounting
-        _userTotals[user] = _userTotals[user].sub(amount);
-
-        // 2. Global Accounting
-        totalStaked = totalStaked.sub(amount);
+        uint256 sharesBefore = _stakingToken.sharesOf(address(this));
 
         // interactions
-        _stakingToken.safeTransfer(user, amount);
+        IERC20Upgradeable(address(_stakingToken)).safeTransfer(user, amount);
 
-        emit Unstaked(user, amount, totalStakedFor(user), now, block.number, "");
+        uint256 sharesAfter = _stakingToken.sharesOf(address(this));
+
+        uint256 shares = sharesAfter.sub(sharesBefore);
+
+        // 1. User Accounting
+        _userTotals[user] = _userTotals[user].sub(shares);
+
+        // 2. Global Accounting
+        totalStaked = totalStaked.sub(shares);
+
+        emit Unstaked(user, shares, totalStakedFor(user), now);
     }
 
     function _signalTokenLock(
@@ -281,31 +277,6 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         uint256 durationSec,
         uint256 startTime
     ) internal {
-        UnlockSchedule memory schedule;
-        schedule.initialLocked = amount;
-        schedule.endAtSec = startTime.add(durationSec);
-        schedule.durationSec = durationSec;
-        schedule.startTime = startTime;
-        unlockSchedules[token].push(schedule);
-
-        emit TokensLocked(token, amount, durationSec, startTime, schedule.endAtSec, now, "");
-        emit UnlockScheduleSet(token, unlockSchedules[token].length, amount, durationSec, startTime, schedule.endAtSec);
-    }
-
-    function _modifyTokenLock(
-        address token,
-        uint256 index,
-        uint256 amount,
-        uint256 durationSec,
-        uint256 startTime
-    ) internal {
-        UnlockSchedule storage schedule = unlockSchedules[token][index];
-
-        schedule.initialLocked = amount;
-        schedule.endAtSec = startTime.add(durationSec);
-        schedule.durationSec = durationSec;
-        schedule.startTime = startTime;
-
-        emit UnlockScheduleSet(token, index, amount, durationSec, startTime, startTime.add(durationSec));
+        emit UnlockScheduleSet(token, unlockSchedules[token].length, amount, durationSec, startTime, startTime.add(durationSec), now);
     }
 }

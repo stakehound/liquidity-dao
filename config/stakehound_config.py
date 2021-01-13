@@ -20,9 +20,9 @@ multisig_config = DotMap(
     ],
 )
 
-dao_config = DotMap(
-    initialOwner=web3.toChecksumAddress(""), token="", kernel="", agent="",
-)
+# dao_config = DotMap(
+#     initialOwner=web3.toChecksumAddress(""), token="", kernel="", agent="",
+# )
 
 globalStartTime = 1607014800
 
@@ -32,7 +32,7 @@ stakehound_config = DotMap(
     startMultiplier=1,
     endMultiplier=3,
     multisig=multisig_config,
-    dao=dao_config,
+    # dao=dao_config,
     globalStartTime=globalStartTime,
     devMultisigParams=DotMap(
         threshold=1,

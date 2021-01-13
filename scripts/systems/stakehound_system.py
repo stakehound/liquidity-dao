@@ -1,5 +1,5 @@
 from brownie.network.gas.strategies import GasNowScalingStrategy
-from helpers.sett.strategy_registry import strategy_name_to_artifact
+from scripts.helpers import strategy_name_to_artifact
 import json
 import decouple
 
@@ -11,13 +11,12 @@ from helpers.registry import registry
 from dotmap import DotMap
 from config.stakehound_config import (
     stakehound_config,
-    sett_config,
 )
-from scripts.systems.sett_system import (
-    deploy_controller,
-    deploy_strategy,
-)
-from helpers.sett.strategy_registry import name_to_artifact
+# from scripts.systems.sett_system import (
+#     deploy_controller,
+#     deploy_strategy,
+# )
+from scripts.helpers import name_to_artifact
 
 from rich.console import Console
 

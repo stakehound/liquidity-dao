@@ -66,9 +66,6 @@ class LinearLogic:
 class StakehoundGeyserMock:
     def __init__(self, key):
         self.key = key
-        self.events = DotMap()
-        self.stakes = DotMap()
-        self.totalShareSeconds = 0
         self.users = DotMap()
         self.unlockSchedules = DotMap()
         self.distributionTokens = []

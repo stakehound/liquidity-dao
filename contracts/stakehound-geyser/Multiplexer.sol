@@ -9,6 +9,7 @@ import "deps/@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable
 import "deps/@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "deps/@openzeppelin/contracts-upgradeable/cryptography/MerkleProofUpgradeable.sol";
 import "interfaces/stakehound/ICumulativeMultiTokenMerkleDistributor.sol";
+import "interfaces/stakehound/IStakedToken.sol";
 
 contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMultiTokenMerkleDistributor, PausableUpgradeable {
     using SafeMathUpgradeable for uint256;
@@ -85,6 +86,11 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
         return lastProposedMerkleData.cycle == lastPublishedMerkleData.cycle.add(1);
     }
 
+    function valueFromShares(address _stakedToken, uint256 shares) internal view returns (uint256) {
+        uint256 sharesPerToken = IStakedToken(_stakedToken).totalShares() / IStakedToken(_stakedToken).totalShares();
+        return shares / sharesPerToken;
+    }
+
     function getClaimedFor(address user, address[] memory tokens) public view returns (address[] memory, uint256[] memory) {
         uint256[] memory userClaimed = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -127,7 +133,7 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
             claimed[msg.sender][tokens[i]] = claimed[msg.sender][tokens[i]].add(claimable);
 
             require(claimed[msg.sender][tokens[i]] == cumulativeAmounts[i], "Claimed amount mismatch");
-            require(IERC20Upgradeable(tokens[i]).transfer(msg.sender, claimable), "Transfer failed");
+            require(IERC20Upgradeable(tokens[i]).transfer(msg.sender, valueFromShares(tokens[i], claimable)), "Transfer failed");
 
             emit Claimed(msg.sender, tokens[i], claimable, cycle, now, block.number);
         }
@@ -162,7 +168,7 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
         uint256 endBlock
     ) external whenNotPaused {
         _onlyRootValidator();
-        
+
         require(root == lastProposedMerkleData.root, "Incorrect root");
         require(contentHash == lastProposedMerkleData.contentHash, "Incorrect content hash");
         require(cycle == lastProposedMerkleData.cycle, "Incorrect cycle");
