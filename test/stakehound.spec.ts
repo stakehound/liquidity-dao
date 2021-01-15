@@ -9,7 +9,7 @@ import { deploy_test, init_test, DeployTestContext } from "./src/deploy";
 import { JsonRpcSigner, Log } from "@ethersproject/providers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
 import stakedTokenAbi from "./src/abi/StakedToken.json";
-import { StakedToken } from "./src/types";
+import { StakedToken, StakedToken__factory } from "./src/types";
 import { Interface, LogDescription } from "ethers/lib/utils";
 import { fetchEvents, collectActions } from "./src/events";
 import { keccak256 } from "ethereumjs-util";
@@ -114,11 +114,23 @@ describe("Stakehound", function () {
         const _s = signers[3];
         const ci = m.claims.findIndex((c) => c.account === _s.address);
         const c = m.claims[ci];
+        const balances = await Promise.all(
+            c.tokens.map((x) =>
+                StakedToken__factory.connect(x, ethers.provider).balanceOf(_s.address)
+            )
+        );
         const tx = await multiplexer
             .connect(_s)
             .claim(c!.tokens, c!.amounts, c!.cycle, m.getHexProof(c!));
-        const txr = await tx.wait(1);
-        console.log(tryParseLogs(txr.logs, [seth.interface, multiplexer.interface]));
+        const newBalances = await Promise.all(
+            c.tokens.map((x) =>
+                StakedToken__factory.connect(x, ethers.provider).balanceOf(_s.address)
+            )
+        ).then((all) => all.map((x) => x.toString()));
+        const expected = _.zip(balances, c.amounts).map(([b, c]) =>
+            b!.add(c!).toString()
+        );
+        expect(_.isEqual(newBalances, expected)).to.eq(true);
     });
 
     // it("test things", async function () {
