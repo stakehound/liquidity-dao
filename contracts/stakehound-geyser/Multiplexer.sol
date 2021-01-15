@@ -114,14 +114,13 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
     function claim(
         address[] calldata tokens,
         uint256[] calldata cumulativeAmounts,
-        uint256 index,
         uint256 cycle,
         bytes32[] calldata merkleProof
     ) external whenNotPaused {
         require(cycle == lastPublishedMerkleData.cycle, "Invalid cycle");
 
         // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encodePacked(index, msg.sender, cycle, tokens, cumulativeAmounts));
+        bytes32 node = keccak256(abi.encode(msg.sender, cycle, tokens, cumulativeAmounts));
         require(MerkleProofUpgradeable.verify(merkleProof, lastPublishedMerkleData.root, node), "Invalid proof");
 
         // Claim each token

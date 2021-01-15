@@ -13,10 +13,13 @@ import { StakedToken } from "./src/types";
 import { Interface, LogDescription } from "ethers/lib/utils";
 import { fetchEvents, collectActions } from "./src/events";
 import {
+    fetch_system_rewards,
     create_calc_geyser_stakes,
     get_rewards,
     combine_rewards,
     compare_rewards,
+    play_validate_system_rewards,
+    validate_rewards,
 } from "./src/calc_stakes";
 
 const giface = new ethers.utils.Interface(
@@ -46,7 +49,7 @@ function tryParseLogs(logs: Log[], ifaces: Interface[]) {
 describe("Stakehound", function () {
     let signers: Signer[];
     let accounts: string[];
-    let geyser: StakehoundGeyser;
+    let sfiroGeyser: StakehoundGeyser;
     let multiplexer: Multiplexer;
     let sfiro: StakedToken;
     let seth: StakedToken;
@@ -54,9 +57,10 @@ describe("Stakehound", function () {
     let spcSigner: JsonRpcSigner;
     let context: DeployTestContext;
     this.beforeAll(async function () {
+        this.timeout(100000);
         ({ signers, accounts } = await getAccounts());
         context = await deploy_test();
-        ({ geyser, multiplexer, sfiro, seth, sxem, spcSigner } = context);
+        ({ multiplexer, sfiroGeyser, sfiro, seth, sxem, spcSigner } = context);
     });
     it("rewards type", async function () {
         const startBlock = await ethers.provider.getBlock(
@@ -66,47 +70,32 @@ describe("Stakehound", function () {
         const endBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
-        const logs = await fetchEvents(
-            geyser.address,
+        const geysers = [
+            context.sethGeyser.address,
+            context.sfiroGeyser.address,
+            context.sethGeyser.address,
+        ];
+        const r = await fetch_system_rewards(
+            ethers.provider,
+            geysers,
             startBlock.number,
             endBlock.number,
-            ethers.provider
+            startBlock.timestamp + 60 * 60 * 24,
+            1
         );
-        const amap = await collectActions(logs);
-        const calc_geyser_stakes = create_calc_geyser_stakes({
-            globalStartTime: startBlock.timestamp,
-        });
-        const end = (await ethers.provider.getBlock(_.last(logs)!.blockNumber!))
-            .timestamp;
-
-        const fr = calc_geyser_stakes(
-            amap,
-            startBlock.timestamp,
-            startBlock.timestamp,
-            startBlock.timestamp + 60 * 60 * 6
+        expect(validate_rewards(r)).to.eq(true);
+        const w = await play_validate_system_rewards(
+            r,
+            ethers.provider,
+            geysers,
+            startBlock.number,
+            endBlock.number,
+            startBlock.timestamp + 60 * 60 * 24,
+            startBlock.timestamp + 60 * 60 * 24 * 2
         );
-        const first = get_rewards(fr, 1);
 
-        const sr = calc_geyser_stakes(
-            amap,
-            startBlock.timestamp,
-            startBlock.timestamp + 60 * 60 * 6 + 1,
-            startBlock.timestamp + 60 * 60 * 12
-        );
-        const second = get_rewards(sr, 2);
-
-        const wr = calc_geyser_stakes(
-            amap,
-            startBlock.timestamp,
-            startBlock.timestamp,
-            startBlock.timestamp + 60 * 60 * 12
-        );
-        const whole = get_rewards(wr, 2);
-
-        const comb = combine_rewards(2, [first, second]);
-
-        expect(compare_rewards(whole, comb)).to.eq(true);
     });
+  
     // it("test things", async function () {
     //     const signers = await get_fake_accounts();
     //     console.log(await Promise.all(signers.map((x) => x.getBalance())));

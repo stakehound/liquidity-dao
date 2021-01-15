@@ -42,7 +42,7 @@ const fetchEvents = async (
                 : 0
         );
     } catch (e) {
-        console.error("failed fetching events");
+        console.error("failed fetching events", e);
         return [];
     }
 };

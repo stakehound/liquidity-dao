@@ -26,6 +26,7 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
     "MAX_PERCENTAGE()": FunctionFragment;
     "TOKEN_LOCKER_ROLE()": FunctionFragment;
     "addDistributionToken(address)": FunctionFragment;
+    "clearScedules(address)": FunctionFragment;
     "getDistributionTokens()": FunctionFragment;
     "getNumDistributionTokens()": FunctionFragment;
     "getRoleAdmin(bytes32)": FunctionFragment;
@@ -64,6 +65,10 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "addDistributionToken",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "clearScedules",
     values: [string]
   ): string;
   encodeFunctionData(
@@ -172,6 +177,10 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "clearScedules",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getDistributionTokens",
     data: BytesLike
   ): Result;
@@ -240,14 +249,16 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: "unstake", data: BytesLike): Result;
 
   events: {
+    "ClearSchedules(address)": EventFragment;
     "RoleAdminChanged(bytes32,bytes32,bytes32)": EventFragment;
     "RoleGranted(bytes32,address,address)": EventFragment;
     "RoleRevoked(bytes32,address,address)": EventFragment;
     "Staked(address,uint256,uint256,uint256)": EventFragment;
-    "UnlockScheduleSet(address,uint256,uint256,uint256,uint256,uint256,uint256)": EventFragment;
+    "UnlockScheduleSet(address,uint256,uint256,uint256,uint256,uint256)": EventFragment;
     "Unstaked(address,uint256,uint256,uint256)": EventFragment;
   };
 
+  getEvent(nameOrSignatureOrTopic: "ClearSchedules"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RoleAdminChanged"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RoleGranted"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RoleRevoked"): EventFragment;
@@ -288,6 +299,16 @@ export class StakehoundGeyser extends Contract {
     ): Promise<ContractTransaction>;
 
     "addDistributionToken(address)"(
+      token: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    clearScedules(
+      token: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "clearScedules(address)"(
       token: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
@@ -562,6 +583,16 @@ export class StakehoundGeyser extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
+  clearScedules(
+    token: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "clearScedules(address)"(
+    token: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
   getDistributionTokens(overrides?: CallOverrides): Promise<string[]>;
 
   "getDistributionTokens()"(overrides?: CallOverrides): Promise<string[]>;
@@ -823,6 +854,13 @@ export class StakehoundGeyser extends Contract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    clearScedules(token: string, overrides?: CallOverrides): Promise<void>;
+
+    "clearScedules(address)"(
+      token: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     getDistributionTokens(overrides?: CallOverrides): Promise<string[]>;
 
     "getDistributionTokens()"(overrides?: CallOverrides): Promise<string[]>;
@@ -1063,6 +1101,8 @@ export class StakehoundGeyser extends Contract {
   };
 
   filters: {
+    ClearSchedules(token: null): EventFilter;
+
     RoleAdminChanged(
       role: BytesLike | null,
       previousAdminRole: BytesLike | null,
@@ -1090,7 +1130,6 @@ export class StakehoundGeyser extends Contract {
 
     UnlockScheduleSet(
       token: null,
-      index: null,
       sharesLocked: null,
       durationSec: null,
       startTime: null,
@@ -1125,6 +1164,13 @@ export class StakehoundGeyser extends Contract {
     ): Promise<BigNumber>;
 
     "addDistributionToken(address)"(
+      token: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    clearScedules(token: string, overrides?: Overrides): Promise<BigNumber>;
+
+    "clearScedules(address)"(
       token: string,
       overrides?: Overrides
     ): Promise<BigNumber>;
@@ -1370,6 +1416,16 @@ export class StakehoundGeyser extends Contract {
     ): Promise<PopulatedTransaction>;
 
     "addDistributionToken(address)"(
+      token: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    clearScedules(
+      token: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "clearScedules(address)"(
       token: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;

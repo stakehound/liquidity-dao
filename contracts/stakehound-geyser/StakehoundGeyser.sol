@@ -46,13 +46,13 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     event Unstaked(address indexed user, uint256 shares, uint256 total, uint256 indexed timestamp);
     event UnlockScheduleSet(
         address token,
-        uint256 index,
         uint256 sharesLocked,
         uint256 durationSec,
         uint256 startTime,
         uint256 endTime,
         uint256 indexed timestamp
     );
+    event ClearSchedules(address token);
 
     /**
      * @param stakingToken_ The token users deposit as stake.
@@ -209,6 +209,19 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         _signalTokenLock(token, amount, durationSec, startTime);
     }
 
+    /// ===== Permissioned Actions: Clear Schedules=====
+
+    /**
+     * @dev This funcion allows the token locker to clear all locking schedules
+     *      for a particular token
+     * @param token Token to remove locking schedules for.
+     */
+    function clearScedules(address token) external {
+        _onlyTokenLocker();
+        require(distributionTokens.contains(token), "StakehoundGeyser: Token not approved by admin");
+        emit ClearSchedules(token);
+    }
+
     /// ===== Internal Implementations =====
 
     /**
@@ -277,6 +290,6 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         uint256 durationSec,
         uint256 startTime
     ) internal {
-        emit UnlockScheduleSet(token, unlockSchedules[token].length, amount, durationSec, startTime, startTime.add(durationSec), now);
+        emit UnlockScheduleSet(token, amount, durationSec, startTime, startTime.add(durationSec), now);
     }
 }

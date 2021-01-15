@@ -3,12 +3,15 @@ import { Signer, BigNumber } from "ethers";
 import { Provider } from "@ethersproject/providers";
 import {
     Multiplexer__factory,
+    StakehoundGeyser,
     StakehoundGeyser__factory,
     // IStakedToken__factory,
 } from "../../typechain";
 import { getAccounts } from "../utils";
 import { StakedToken__factory, StakedToken } from "./types";
 import { Awaited } from "ts-essentials";
+import { GeyserAction } from "./calc_stakes";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 /*
 
 
@@ -43,14 +46,18 @@ const deploy_test = async () => {
         "StakehoundGeyser"
     )) as StakehoundGeyser__factory;
     const { accounts, signers } = await getAccounts();
-    const geyser = await gf.deploy();
+    const sfiroGeyser = await gf.deploy();
+    const sethGeyser = await gf.deploy();
+    const sxemGeyser = await gf.deploy();
+
     const multiplexer = await mpf.deploy();
 
-    await Promise.all([geyser.deployed(), multiplexer.deployed()]);
+    await Promise.all([sfiroGeyser.deployed(), multiplexer.deployed()]);
     let sfiro = StakedToken__factory.connect(
         mainnet_addresses.stakedFiro,
         ethers.provider
     );
+
     const spc = await sfiro.supplyController();
     await HRE.network.provider.request({
         method: "hardhat_impersonateAccount",
@@ -60,13 +67,79 @@ const deploy_test = async () => {
     sfiro = sfiro.connect(spcSigner);
     const seth = StakedToken__factory.connect(mainnet_addresses.stakedETH, spcSigner);
     const sxem = StakedToken__factory.connect(mainnet_addresses.stakedXEM, spcSigner);
-    await geyser.initialize(sfiro.address, 1610177100, accounts[0], accounts[0]);
+    const bnum = await ethers.provider.getBlockNumber();
+    await sfiroGeyser.initialize(sfiro.address, bnum + 4, accounts[0], accounts[0]);
+    await sethGeyser.initialize(seth.address, bnum + 4, accounts[0], accounts[0]);
+    await sxemGeyser.initialize(sxem.address, bnum + 4, accounts[0], accounts[0]);
     await multiplexer.initialize(accounts[0], accounts[0], accounts[0]);
 
-    return { sfiro, geyser, multiplexer, seth, sxem, spcSigner };
+    return {
+        deployer: <SignerWithAddress>signers[0],
+        sfiro,
+        sfiroGeyser,
+        sxemGeyser,
+        sethGeyser,
+        multiplexer,
+        seth,
+        sxem,
+        spcSigner,
+    };
 };
 
 type DeployTestContext = Awaited<ReturnType<typeof deploy_test>>;
+
+const init_geyser = async (
+    geyser: StakehoundGeyser,
+    con: DeployTestContext,
+    startTime: number
+) => {
+    await Promise.all([
+        geyser.addDistributionToken(con.sfiro.address),
+        geyser.addDistributionToken(con.seth.address),
+        geyser.addDistributionToken(con.sxem.address),
+    ]).then((all) => all.map((x) => x.wait(1)));
+
+    await Promise.all([
+        geyser.signalTokenLock(
+            con.sfiro.address,
+            e10.mul(5000),
+            60 * 60 * 24 * 30,
+            startTime
+        ),
+        geyser.signalTokenLock(
+            con.seth.address,
+            e14.mul(5000),
+            60 * 60 * 24 * 30,
+            startTime
+        ),
+        geyser.signalTokenLock(
+            con.sxem.address,
+            e10.mul(5000),
+            60 * 60 * 24 * 30,
+            startTime
+        ),
+        con.sfiro.mint(con.multiplexer.address, e10.mul(5000)),
+        con.seth.mint(con.multiplexer.address, e14.mul(5000)),
+        con.sxem.mint(con.multiplexer.address, e10.mul(5000)),
+    ]).then((all) => all.map((x) => x.wait(1)));
+};
+
+const mintAndStake = async (
+    // con: DeployTestContext,
+    signers: SignerWithAddress[],
+    geyser: StakehoundGeyser,
+    stakedToken: StakedToken
+) => {
+    await Promise.all(
+        signers.map(async (x) => {
+            await stakedToken.mint(x.address, e10);
+            const _token = stakedToken.connect(x);
+            await _token.approve(geyser.address, e10);
+            const _geyser = geyser.connect(x);
+            await (await _geyser.stake(e10, "0x")).wait(1);
+        })
+    );
+};
 
 const init_test = async (con: DeployTestContext) => {
     const signers = await ethers.getSigners();
@@ -75,42 +148,12 @@ const init_test = async (con: DeployTestContext) => {
         await ethers.provider.getBlockNumber()
     );
 
-    await Promise.all([
-        con.geyser.addDistributionToken(con.sfiro.address),
-        con.geyser.addDistributionToken(con.seth.address),
-        con.geyser.addDistributionToken(con.sxem.address),
-    ]).then((all) => all.map((x) => x.wait(1)));
-
-    await Promise.all([
-        con.geyser.signalTokenLock(
-            con.sfiro.address,
-            e10.mul(5000),
-            60 * 60 * 24 * 30,
-            block.timestamp
-        ),
-        con.geyser.signalTokenLock(
-            con.seth.address,
-            e14.mul(5000),
-            60 * 60 * 24 * 30,
-            block.timestamp
-        ),
-        con.geyser.signalTokenLock(
-            con.sxem.address,
-            e10.mul(5000),
-            60 * 60 * 24 * 30,
-            block.timestamp
-        ),
-    ]).then((all) => all.map((x) => x.wait(1)));
-
-    await Promise.all(
-        signers.map(async (x) => {
-            await con.sfiro.mint(x.address, e10);
-            const _sfiro = con.sfiro.connect(x);
-            await _sfiro.approve(con.geyser.address, e10);
-            const _geyser = con.geyser.connect(x);
-            await (await _geyser.stake(e10, "0x")).wait(1);
-        })
-    );
+    await init_geyser(con.sfiroGeyser, con, block.timestamp);
+    await init_geyser(con.sethGeyser, con, block.timestamp);
+    await init_geyser(con.sxemGeyser, con, block.timestamp);
+    await mintAndStake(signers, con.sethGeyser, con.seth);
+    await mintAndStake(signers, con.sfiroGeyser, con.sfiro);
+    await mintAndStake(signers, con.sxemGeyser, con.sxem);
 };
 
 export { deploy_test, init_test, DeployTestContext };
