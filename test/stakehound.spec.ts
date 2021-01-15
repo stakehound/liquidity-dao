@@ -5,7 +5,7 @@ import { Signer, BigNumber } from "ethers";
 import { getAccounts } from "./utils";
 import _ from "lodash";
 import { StakehoundGeyser, Multiplexer, MerkleMock__factory } from "../typechain";
-import { deploy_test, init_test, DeployTestContext } from "./src/deploy";
+import { deploy_test, init_test, DeployTestContext } from "./src/deploy-test";
 import { JsonRpcSigner, Log } from "@ethersproject/providers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
 import stakedTokenAbi from "./src/abi/StakedToken.json";
@@ -19,7 +19,7 @@ import {
     get_rewards,
     combine_rewards,
     compare_rewards,
-    play_validate_system_rewards,
+    play_system_rewards,
     validate_rewards,
 } from "./src/calc_stakes";
 import MultiMerkle, { rewards_to_claims, encode_claim } from "./src/MultiMerkle";
@@ -51,18 +51,13 @@ function tryParseLogs(logs: Log[], ifaces: Interface[]) {
 
 describe("Stakehound", function () {
     let signers: SignerWithAddress[];
-    let sfiroGeyser: StakehoundGeyser;
     let multiplexer: Multiplexer;
-    let sfiro: StakedToken;
-    let seth: StakedToken;
-    let sxem: StakedToken;
-    let spcSigner: JsonRpcSigner;
     let context: DeployTestContext;
     this.beforeAll(async function () {
         this.timeout(100000);
         signers = await ethers.getSigners();
         context = await deploy_test();
-        ({ multiplexer, sfiroGeyser, sfiro, seth, sxem, spcSigner } = context);
+        ({ multiplexer } = context);
     });
     it("rewards type", async function () {
         const startBlock = await ethers.provider.getBlock(
@@ -73,9 +68,9 @@ describe("Stakehound", function () {
             await ethers.provider.getBlockNumber()
         );
         const geysers = [
-            context.sethGeyser.address,
-            context.sfiroGeyser.address,
-            context.sethGeyser.address,
+            context.geysers.seth.address,
+            context.geysers.sfiro.address,
+            context.geysers.seth.address,
         ];
         const r = await fetch_system_rewards(
             ethers.provider,
@@ -86,7 +81,7 @@ describe("Stakehound", function () {
             1
         );
         expect(validate_rewards(r)).to.eq(true);
-        const w = await play_validate_system_rewards(
+        const w = await play_system_rewards(
             r,
             ethers.provider,
             geysers,
@@ -119,7 +114,7 @@ describe("Stakehound", function () {
                 StakedToken__factory.connect(x, ethers.provider).balanceOf(_s.address)
             )
         );
-        const tx = await multiplexer
+        await multiplexer
             .connect(_s)
             .claim(c!.tokens, c!.amounts, c!.cycle, m.getHexProof(c!));
         const newBalances = await Promise.all(

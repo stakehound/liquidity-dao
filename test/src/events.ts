@@ -59,9 +59,19 @@ const collectActions = (logs: Log[]) => {
                     ? "unstake"
                     : parsed.name === "UnlockScheduleSet"
                     ? "unlock"
+                    : parsed.name === "ClearSchedules"
+                    ? "clear"
                     : null;
             if (!type) {
                 console.error("parseEvent: unexpected event");
+                continue;
+            }
+            if (type === "clear") {
+                acts.push({
+                    type,
+                    token: getAddress(parsed.args.token),
+                    timestamp: parsed.args.timestamp.toNumber(),
+                });
                 continue;
             }
             if (type === "unlock") {
