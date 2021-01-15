@@ -21,14 +21,23 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 
 interface MerkleMockInterface extends ethers.utils.Interface {
   functions: {
+    "computeHash(bytes32[],bytes32)": FunctionFragment;
     "verify(bytes32[],bytes32,bytes32)": FunctionFragment;
   };
 
+  encodeFunctionData(
+    functionFragment: "computeHash",
+    values: [BytesLike[], BytesLike]
+  ): string;
   encodeFunctionData(
     functionFragment: "verify",
     values: [BytesLike[], BytesLike, BytesLike]
   ): string;
 
+  decodeFunctionResult(
+    functionFragment: "computeHash",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
 
   events: {};
@@ -48,6 +57,18 @@ export class MerkleMock extends Contract {
   interface: MerkleMockInterface;
 
   functions: {
+    computeHash(
+      proof: BytesLike[],
+      leaf: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string[]]>;
+
+    "computeHash(bytes32[],bytes32)"(
+      proof: BytesLike[],
+      leaf: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string[]]>;
+
     verify(
       proof: BytesLike[],
       root: BytesLike,
@@ -62,6 +83,18 @@ export class MerkleMock extends Contract {
       overrides?: CallOverrides
     ): Promise<[boolean]>;
   };
+
+  computeHash(
+    proof: BytesLike[],
+    leaf: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<string[]>;
+
+  "computeHash(bytes32[],bytes32)"(
+    proof: BytesLike[],
+    leaf: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<string[]>;
 
   verify(
     proof: BytesLike[],
@@ -78,6 +111,18 @@ export class MerkleMock extends Contract {
   ): Promise<boolean>;
 
   callStatic: {
+    computeHash(
+      proof: BytesLike[],
+      leaf: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string[]>;
+
+    "computeHash(bytes32[],bytes32)"(
+      proof: BytesLike[],
+      leaf: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string[]>;
+
     verify(
       proof: BytesLike[],
       root: BytesLike,
@@ -96,6 +141,18 @@ export class MerkleMock extends Contract {
   filters: {};
 
   estimateGas: {
+    computeHash(
+      proof: BytesLike[],
+      leaf: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    "computeHash(bytes32[],bytes32)"(
+      proof: BytesLike[],
+      leaf: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     verify(
       proof: BytesLike[],
       root: BytesLike,
@@ -112,6 +169,18 @@ export class MerkleMock extends Contract {
   };
 
   populateTransaction: {
+    computeHash(
+      proof: BytesLike[],
+      leaf: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    "computeHash(bytes32[],bytes32)"(
+      proof: BytesLike[],
+      leaf: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     verify(
       proof: BytesLike[],
       root: BytesLike,

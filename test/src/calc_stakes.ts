@@ -707,6 +707,7 @@ export {
     StakeAction,
     UnstakeAction,
     ActionsMap,
+    Rewards,
     create_calc_geyser_stakes,
     combine_rewards,
     compare_rewards,

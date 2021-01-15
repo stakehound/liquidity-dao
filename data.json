@@ -1,0 +1,192 @@
+[
+    {
+        "cycle": 1,
+        "account": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["952364408654", "952364408654", "9523644086543997"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["1666652191031", "1666652191031", "16666521910316606"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["512802696190", "512802696190", "5128026961901188"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["833316444896", "833316444896", "8333164448969162"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x2546BcD3c84621e976D8185a91A922aE77ECEc30",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["416648571494", "416648571494", "4166485714942552"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["3333323682965", "3333323682965", "33333236829658740"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["6666666666666", "6666666666666", "66666666666666666"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x71bE63f3384f5fb98995898A86B02Fb2426c5788",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["606043059480", "606043059480", "6060430594807592"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["350858907175", "350858907175", "3508589071757209"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["2222209355028", "2222209355028", "22222093550283579"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["1111095026979", "1111095026979", "11110950269790843"]
+    },
+    {
+        "cycle": 1,
+        "account": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["1333317892611", "1333317892611", "13333178926112907"]
+    },
+    {
+        "cycle": 1,
+        "account": "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["666649295602", "666649295602", "6666492956029108"]
+    },
+    {
+        "cycle": 1,
+        "account": "0xFABB0ac9d68B0B445fB7357272Ff202C5651694a",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["555537862702", "555537862702", "5555378627029859"]
+    },
+    {
+        "cycle": 1,
+        "account": "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["740723584184", "740723584184", "7407235841842333"]
+    },
+    {
+        "cycle": 1,
+        "account": "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["392138696558", "392138696558", "3921386965586309"]
+    },
+    {
+        "cycle": 1,
+        "account": "0xcd3B766CCDd6AE721141F452C550Ca635964ce71",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["444426429747", "444426429747", "4444264297471781"]
+    },
+    {
+        "cycle": 1,
+        "account": "0xdD2FD4581271e230360230F9337D5c0430Bf44C0",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["370352141054", "370352141054", "3703521410540887"]
+    },
+    {
+        "cycle": 1,
+        "account": "0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097",
+        "tokens": [
+            "0x0C63cAE5fcC2Ca3dDE60a35e50362220651eBEc8",
+            "0x160B1E5aaBFD70B2FC40Af815014925D71CEEd7E",
+            "0xDFe66B14D37C77F4E9b180cEb433d1b164f0281D"
+        ],
+        "amounts": ["476172553456", "476172553456", "4761725534568209"]
+    }
+]

@@ -30,7 +30,7 @@ interface MultiplexerInterface extends ethers.utils.Interface {
     "approveRoot(bytes32,bytes32,uint256,uint256,uint256)": FunctionFragment;
     "claim(address[],uint256[],uint256,bytes32[])": FunctionFragment;
     "claimed(address,address)": FunctionFragment;
-    "encodeClaim(address[],uint256[],address,uint256,uint256)": FunctionFragment;
+    "encodeClaim(address[],uint256[],address,uint256)": FunctionFragment;
     "getClaimedFor(address,address[])": FunctionFragment;
     "getCurrentMerkleData()": FunctionFragment;
     "getPendingMerkleData()": FunctionFragment;
@@ -86,7 +86,7 @@ interface MultiplexerInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "encodeClaim",
-    values: [string[], BigNumberish[], string, BigNumberish, BigNumberish]
+    values: [string[], BigNumberish[], string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getClaimedFor",
@@ -351,16 +351,14 @@ export class Multiplexer extends Contract {
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
       account: string,
-      index: BigNumberish,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string, string] & { encoded: string; hash: string }>;
 
-    "encodeClaim(address[],uint256[],address,uint256,uint256)"(
+    "encodeClaim(address[],uint256[],address,uint256)"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
       account: string,
-      index: BigNumberish,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string, string] & { encoded: string; hash: string }>;
@@ -692,16 +690,14 @@ export class Multiplexer extends Contract {
     tokens: string[],
     cumulativeAmounts: BigNumberish[],
     account: string,
-    index: BigNumberish,
     cycle: BigNumberish,
     overrides?: CallOverrides
   ): Promise<[string, string] & { encoded: string; hash: string }>;
 
-  "encodeClaim(address[],uint256[],address,uint256,uint256)"(
+  "encodeClaim(address[],uint256[],address,uint256)"(
     tokens: string[],
     cumulativeAmounts: BigNumberish[],
     account: string,
-    index: BigNumberish,
     cycle: BigNumberish,
     overrides?: CallOverrides
   ): Promise<[string, string] & { encoded: string; hash: string }>;
@@ -1025,16 +1021,14 @@ export class Multiplexer extends Contract {
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
       account: string,
-      index: BigNumberish,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string, string] & { encoded: string; hash: string }>;
 
-    "encodeClaim(address[],uint256[],address,uint256,uint256)"(
+    "encodeClaim(address[],uint256[],address,uint256)"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
       account: string,
-      index: BigNumberish,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string, string] & { encoded: string; hash: string }>;
@@ -1418,16 +1412,14 @@ export class Multiplexer extends Contract {
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
       account: string,
-      index: BigNumberish,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    "encodeClaim(address[],uint256[],address,uint256,uint256)"(
+    "encodeClaim(address[],uint256[],address,uint256)"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
       account: string,
-      index: BigNumberish,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -1679,16 +1671,14 @@ export class Multiplexer extends Contract {
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
       account: string,
-      index: BigNumberish,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    "encodeClaim(address[],uint256[],address,uint256,uint256)"(
+    "encodeClaim(address[],uint256[],address,uint256)"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
       account: string,
-      index: BigNumberish,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;

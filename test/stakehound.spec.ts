@@ -4,7 +4,7 @@ import { solidity } from "ethereum-waffle";
 import { Signer, BigNumber } from "ethers";
 import { getAccounts } from "./utils";
 import _ from "lodash";
-import { StakehoundGeyser, Multiplexer } from "../typechain";
+import { StakehoundGeyser, Multiplexer, MerkleMock__factory } from "../typechain";
 import { deploy_test, init_test, DeployTestContext } from "./src/deploy";
 import { JsonRpcSigner, Log } from "@ethersproject/providers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
@@ -12,6 +12,7 @@ import stakedTokenAbi from "./src/abi/StakedToken.json";
 import { StakedToken } from "./src/types";
 import { Interface, LogDescription } from "ethers/lib/utils";
 import { fetchEvents, collectActions } from "./src/events";
+import { keccak256 } from "ethereumjs-util";
 import {
     fetch_system_rewards,
     create_calc_geyser_stakes,
@@ -21,6 +22,8 @@ import {
     play_validate_system_rewards,
     validate_rewards,
 } from "./src/calc_stakes";
+import MultiMerkle, { rewards_to_claims, encode_claim } from "./src/MultiMerkle";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 const giface = new ethers.utils.Interface(
     geyserAbi.abi
@@ -47,8 +50,7 @@ function tryParseLogs(logs: Log[], ifaces: Interface[]) {
 }
 
 describe("Stakehound", function () {
-    let signers: Signer[];
-    let accounts: string[];
+    let signers: SignerWithAddress[];
     let sfiroGeyser: StakehoundGeyser;
     let multiplexer: Multiplexer;
     let sfiro: StakedToken;
@@ -58,7 +60,7 @@ describe("Stakehound", function () {
     let context: DeployTestContext;
     this.beforeAll(async function () {
         this.timeout(100000);
-        ({ signers, accounts } = await getAccounts());
+        signers = await ethers.getSigners();
         context = await deploy_test();
         ({ multiplexer, sfiroGeyser, sfiro, seth, sxem, spcSigner } = context);
     });
@@ -93,9 +95,32 @@ describe("Stakehound", function () {
             startBlock.timestamp + 60 * 60 * 24,
             startBlock.timestamp + 60 * 60 * 24 * 2
         );
-
+        w.cycle = 1; // hack for tests
+        const m = new MultiMerkle(rewards_to_claims(w));
+        await multiplexer.proposeRoot(
+            m.getHexRoot(),
+            m.getHexRoot(),
+            w.cycle,
+            0,
+            endBlock.number * 2
+        );
+        await multiplexer.approveRoot(
+            m.getHexRoot(),
+            m.getHexRoot(),
+            w.cycle,
+            0,
+            endBlock.number * 2
+        );
+        const _s = signers[3];
+        const ci = m.claims.findIndex((c) => c.account === _s.address);
+        const c = m.claims[ci];
+        const tx = await multiplexer
+            .connect(_s)
+            .claim(c!.tokens, c!.amounts, c!.cycle, m.getHexProof(c!));
+        const txr = await tx.wait(1);
+        console.log(tryParseLogs(txr.logs, [seth.interface, multiplexer.interface]));
     });
-  
+
     // it("test things", async function () {
     //     const signers = await get_fake_accounts();
     //     console.log(await Promise.all(signers.map((x) => x.getBalance())));
