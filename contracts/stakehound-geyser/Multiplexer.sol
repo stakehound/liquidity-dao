@@ -63,7 +63,7 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
     }
 
     function _onlyRootValidator() internal view {
-        require(hasRole(ROOT_PROPOSER_ROLE, msg.sender), "onlyRootUpdater");
+        require(hasRole(ROOT_VALIDATOR_ROLE, msg.sender), "onlyRootUpdater");
     }
 
     function _onlyPauser() internal view {

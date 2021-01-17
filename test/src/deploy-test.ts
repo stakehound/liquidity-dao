@@ -38,6 +38,13 @@ const valueToShares = async (st: StakedToken, val: BigNumber) => {
     return val.mul(sharesPerToken);
 };
 
+const sharesToValue = async (st: StakedToken, shares: BigNumber) => {
+    const tshares = await st.totalShares();
+    const tsupply = await st.totalSupply();
+    const sharesPerToken = tshares.div(tsupply);
+    return shares.div(sharesPerToken);
+};
+
 export const tokenNames = ["sfiro", "seth", "sxem"] as const;
 
 export type Tokens = typeof tokenNames[number];
@@ -157,6 +164,34 @@ const mintAndStake = async (
     );
 };
 
+const unstake = async (
+    // con: DeployTestContext,
+    signers: SignerWithAddress[],
+    geyser: StakehoundGeyser,
+    stakedToken: StakedToken
+) => {
+    await Promise.all(
+        signers.map(async (x) => {
+            await stakedToken.mint(x.address, e10);
+            const _token = stakedToken.connect(x);
+            await _token.approve(geyser.address, e10);
+            const _geyser = geyser.connect(x);
+            const shares = await _geyser.totalStakedFor(x.address);
+
+            const val = await sharesToValue(stakedToken, shares);
+            await _geyser.unstake(val, "0x");
+        })
+    );
+};
+
+const unstake_all = async (con: DeployTestContext) => {
+    const signers = (await ethers.getSigners()).slice(1);
+
+    await unstake(signers, con.geysers.seth, con.tokens.seth);
+    await unstake(signers, con.geysers.sfiro, con.tokens.sfiro);
+    await unstake(signers, con.geysers.sxem, con.tokens.sxem);
+};
+
 const init_test = async (con: DeployTestContext) => {
     const signers = await ethers.getSigners();
     const deployer = signers.splice(0, 1);
@@ -172,4 +207,4 @@ const init_test = async (con: DeployTestContext) => {
     await mintAndStake(signers, con.geysers.sxem, con.tokens.sxem);
 };
 
-export { deploy_test, init_test, DeployTestContext };
+export { deploy_test, init_test, DeployTestContext, unstake_all };

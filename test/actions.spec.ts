@@ -5,7 +5,12 @@ import { Signer, BigNumber } from "ethers";
 import { getAccounts } from "./utils";
 import _ from "lodash";
 import { StakehoundGeyser, Multiplexer, MerkleMock__factory } from "../typechain";
-import { deploy_test, init_test, DeployTestContext } from "./src/deploy-test";
+import {
+    deploy_test,
+    init_test,
+    DeployTestContext,
+    unstake_all,
+} from "./src/deploy-test";
 import { JsonRpcSigner, Log } from "@ethersproject/providers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
 import stakedTokenAbi from "./src/abi/StakedToken.json";
@@ -74,10 +79,66 @@ describe("Action tests", function () {
     this.beforeAll(async function () {
         this.timeout(100000);
         signers = await ethers.getSigners();
+    });
+    this.beforeEach(async function () {
+        this.timeout(100000);
         con = await deploy_test();
         ({ multiplexer } = con);
     });
+    // it("clear schedules stops rewards from accumulating", async function () {
+    //     this.timeout(100000);
+    //     const startBlock = await ethers.provider.getBlock(
+    //         await ethers.provider.getBlockNumber()
+    //     );
+    //     await init_test(con);
+    //     const endBlock = await ethers.provider.getBlock(
+    //         await ethers.provider.getBlockNumber()
+    //     );
+    //     const geysers = [
+    //         con.geysers.seth.address,
+    //         con.geysers.sfiro.address,
+    //         con.geysers.seth.address,
+    //     ];
+    //     const oneday = await fetch_system_rewards(
+    //         ethers.provider,
+    //         geysers,
+    //         startBlock.number,
+    //         endBlock.number,
+    //         startBlock.timestamp + 60 * 60 * 24,
+    //         1
+    //     );
+
+    //     await HRE.network.provider.request({
+    //         method: "evm_setNextBlockTimestamp",
+    //         params: [startBlock.timestamp + 60 * 60 * 24],
+    //     });
+
+    //     await Promise.all(
+    //         _.values(con.geysers).map((g) =>
+    //             Promise.all(
+    //                 _.values(con.tokens).map((t) => g.clearSchedules(t.address))
+    //             )
+    //         )
+    //     );
+    //     const newEnd = await ethers.provider.getBlock(
+    //         await ethers.provider.getBlockNumber()
+    //     );
+
+    //     const twodays = await fetch_system_rewards(
+    //         ethers.provider,
+    //         geysers,
+    //         startBlock.number,
+    //         newEnd.number,
+    //         startBlock.timestamp + 60 * 60 * 24 * 2,
+    //         1
+    //     );
+
+    //     expect(validate_rewards(oneday)).to.eq(true);
+    //     expect(validate_rewards(twodays)).to.eq(true);
+    //     expect(compare_rewards(oneday, twodays)).to.eq(true);
+    // });
     it("clear schedules stops rewards from accumulating", async function () {
+        this.timeout(100000);
         const startBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
@@ -98,17 +159,13 @@ describe("Action tests", function () {
             startBlock.timestamp + 60 * 60 * 24,
             1
         );
+
         await HRE.network.provider.request({
             method: "evm_setNextBlockTimestamp",
             params: [startBlock.timestamp + 60 * 60 * 24],
         });
-        await Promise.all(
-            _.values(con.geysers).map((g) =>
-                Promise.all(
-                    _.values(con.tokens).map((t) => g.clearSchedules(t.address))
-                )
-            )
-        );
+
+        await unstake_all(con);
         const newEnd = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
@@ -121,7 +178,7 @@ describe("Action tests", function () {
             startBlock.timestamp + 60 * 60 * 24 * 2,
             1
         );
-
+        log_pair(oneday, twodays);
         expect(validate_rewards(oneday)).to.eq(true);
         expect(validate_rewards(twodays)).to.eq(true);
         expect(compare_rewards(oneday, twodays)).to.eq(true);

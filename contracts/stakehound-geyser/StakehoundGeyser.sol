@@ -273,7 +273,7 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
 
         uint256 sharesAfter = _stakingToken.sharesOf(address(this));
 
-        uint256 shares = sharesAfter.sub(sharesBefore);
+        uint256 shares = sharesBefore.sub(sharesAfter);
 
         // 1. User Accounting
         _userTotals[user] = _userTotals[user].sub(shares);
