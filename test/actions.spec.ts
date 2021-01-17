@@ -24,8 +24,11 @@ import {
     get_rewards,
     combine_rewards,
     compare_rewards,
+    compare_users,
     play_system_rewards,
     validate_rewards,
+    compare_distributed,
+    validate_distributed,
     Rewards,
 } from "./src/calc_stakes";
 import MultiMerkle, { rewards_to_claims, encode_claim } from "./src/MultiMerkle";
@@ -41,23 +44,6 @@ use(solidity);
 const MAX_NUMBER = BigNumber.from(
     "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 );
-
-const log_pair = (r0: Rewards, r1: Rewards) => {
-    console.log("users");
-    console.log(
-        _.zip(
-            _.values(r0.users).map((u) => _.values(u.reward).map((t) => t.toFixed(0))),
-            _.values(r1.users).map((u) => _.values(u.reward).map((t) => t.toFixed(0)))
-        )
-    );
-    console.log("tokens");
-    console.log(
-        _.zip(
-            _.values(r0.tokens).map((t) => t.toFixed(0)),
-            _.values(r1.tokens).map((t) => t.toFixed(0))
-        )
-    );
-};
 
 function tryParseLogs(logs: Log[], ifaces: Interface[]) {
     const out: LogDescription[] = [];
@@ -85,58 +71,6 @@ describe("Action tests", function () {
         con = await deploy_test();
         ({ multiplexer } = con);
     });
-    // it("clear schedules stops rewards from accumulating", async function () {
-    //     this.timeout(100000);
-    //     const startBlock = await ethers.provider.getBlock(
-    //         await ethers.provider.getBlockNumber()
-    //     );
-    //     await init_test(con);
-    //     const endBlock = await ethers.provider.getBlock(
-    //         await ethers.provider.getBlockNumber()
-    //     );
-    //     const geysers = [
-    //         con.geysers.seth.address,
-    //         con.geysers.sfiro.address,
-    //         con.geysers.seth.address,
-    //     ];
-    //     const oneday = await fetch_system_rewards(
-    //         ethers.provider,
-    //         geysers,
-    //         startBlock.number,
-    //         endBlock.number,
-    //         startBlock.timestamp + 60 * 60 * 24,
-    //         1
-    //     );
-
-    //     await HRE.network.provider.request({
-    //         method: "evm_setNextBlockTimestamp",
-    //         params: [startBlock.timestamp + 60 * 60 * 24],
-    //     });
-
-    //     await Promise.all(
-    //         _.values(con.geysers).map((g) =>
-    //             Promise.all(
-    //                 _.values(con.tokens).map((t) => g.clearSchedules(t.address))
-    //             )
-    //         )
-    //     );
-    //     const newEnd = await ethers.provider.getBlock(
-    //         await ethers.provider.getBlockNumber()
-    //     );
-
-    //     const twodays = await fetch_system_rewards(
-    //         ethers.provider,
-    //         geysers,
-    //         startBlock.number,
-    //         newEnd.number,
-    //         startBlock.timestamp + 60 * 60 * 24 * 2,
-    //         1
-    //     );
-
-    //     expect(validate_rewards(oneday)).to.eq(true);
-    //     expect(validate_rewards(twodays)).to.eq(true);
-    //     expect(compare_rewards(oneday, twodays)).to.eq(true);
-    // });
     it("clear schedules stops rewards from accumulating", async function () {
         this.timeout(100000);
         const startBlock = await ethers.provider.getBlock(
@@ -149,7 +83,7 @@ describe("Action tests", function () {
         const geysers = [
             con.geysers.seth.address,
             con.geysers.sfiro.address,
-            con.geysers.seth.address,
+            con.geysers.sxem.address,
         ];
         const oneday = await fetch_system_rewards(
             ethers.provider,
@@ -165,8 +99,13 @@ describe("Action tests", function () {
             params: [startBlock.timestamp + 60 * 60 * 24],
         });
 
-        await unstake_all(con);
-        
+        await Promise.all(
+            _.values(con.geysers).map((g) =>
+                Promise.all(
+                    _.values(con.tokens).map((t) => g.clearSchedules(t.address))
+                )
+            )
+        );
         const newEnd = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
@@ -179,8 +118,64 @@ describe("Action tests", function () {
             startBlock.timestamp + 60 * 60 * 24 * 2,
             1
         );
+
         expect(validate_rewards(oneday)).to.eq(true);
         expect(validate_rewards(twodays)).to.eq(true);
         expect(compare_rewards(oneday, twodays)).to.eq(true);
+    });
+    it("unstaking stops rewards from accumulating", async function () {
+        this.timeout(100000);
+        const startBlock = await ethers.provider.getBlock(
+            await ethers.provider.getBlockNumber()
+        );
+        await init_test(con);
+        const endBlock = await ethers.provider.getBlock(
+            await ethers.provider.getBlockNumber()
+        );
+        const geysers = [
+            con.geysers.seth.address,
+            con.geysers.sfiro.address,
+            con.geysers.sxem.address,
+        ];
+        const onedayP = fetch_system_rewards(
+            ethers.provider,
+            geysers,
+            startBlock.number,
+            endBlock.number,
+            startBlock.timestamp + 60 * 60 * 24,
+            1,
+            false
+        );
+
+        await HRE.network.provider.request({
+            method: "evm_setNextBlockTimestamp",
+            params: [startBlock.timestamp + 60 * 60 * 24],
+        });
+
+        await unstake_all(con);
+
+        const newEnd = await ethers.provider.getBlock(
+            await ethers.provider.getBlockNumber()
+        );
+
+        const [oneday, twodays] = await onedayP.then(async (oneday) => [
+            oneday,
+            await fetch_system_rewards(
+                ethers.provider,
+                geysers,
+                startBlock.number,
+                newEnd.number,
+                startBlock.timestamp + 60 * 60 * 24 * 2,
+                1,
+                false
+            ),
+        ]);
+
+        expect(validate_rewards(oneday)).to.eq(true);
+        expect(validate_rewards(twodays)).to.eq(false);
+        expect(validate_distributed(twodays)).to.eq(true);
+        expect(compare_distributed(oneday, twodays)).to.eq(true);
+        expect(compare_users(oneday, twodays)).to.eq(true);
+        expect(compare_rewards(oneday, twodays)).to.eq(false);
     });
 });

@@ -1,8 +1,9 @@
-import { BigNumber } from "bignumber.js";
-import { StakehoundConfig } from "./config";
-import _ from "lodash";
 import assert from "assert";
+import _ from "lodash";
+import { BigNumber } from "bignumber.js";
 import { Provider } from "@ethersproject/providers";
+
+import { StakehoundConfig } from "./config";
 import { collectActions, fetchEvents } from "./events";
 import { StakehoundGeyser__factory } from "../../typechain";
 
@@ -21,16 +22,18 @@ interface Schedules {
     [token: string]: UnlockScheduleAction[];
 }
 
-interface UserShareSeconds {
+interface dUser {
     user: string;
     shareSecondsRange: BigNumber;
     shareSeconds: BigNumber;
 }
 
-interface GeyserShareSeconds {
-    users: { [user: string]: UserShareSeconds };
+interface dState {
+    users: { [user: string]: dUser };
     totalShareSeconds: BigNumber;
     totalShareSecondsRange: BigNumber;
+    totalRewards: TokenReward;
+    totalRewardsInRange: TokenReward;
 }
 
 interface UserState {
@@ -97,6 +100,8 @@ interface GeyserState {
     users: { [user: string]: UserState };
     totalRewards: TokenReward;
     totalRewardsInRange: TokenReward;
+    // totalDistributed: TokenReward;
+    // totalDistributedInRange: TokenReward;
     rewardTokens: string[];
     schedules: Schedules;
     absTime: number;
@@ -112,8 +117,10 @@ interface UserRewards {
 
 interface Rewards {
     cycle: number;
-    tokens: TokenReward;
-    tokensInRange: TokenReward;
+    rewards: TokenReward;
+    rewardsInRange: TokenReward;
+    rewardsDistributed: TokenReward;
+    rewardsDistributedInRange: TokenReward;
     users: { [user: string]: UserRewards };
 }
 
@@ -137,8 +144,10 @@ const user_reward_to_integer = (r: UserRewards): UserRewards => {
 const rewards_to_integer = (r: Rewards): Rewards => {
     return {
         cycle: r.cycle,
-        tokens: token_reward_to_integer(r.tokens),
-        tokensInRange: token_reward_to_integer(r.tokensInRange),
+        rewards: token_reward_to_integer(r.rewards),
+        rewardsInRange: token_reward_to_integer(r.rewardsInRange),
+        rewardsDistributed: token_reward_to_integer(r.rewards),
+        rewardsDistributedInRange: token_reward_to_integer(r.rewardsInRange),
         users: _.transform(
             r.users,
             (acc: { [user: string]: UserRewards }, val, key) => {
@@ -152,14 +161,16 @@ const rewards_to_integer = (r: Rewards): Rewards => {
 const get_rewards = (st: GeyserState, cycle: number): Rewards => {
     const r: Rewards = {
         cycle,
-        tokens: {},
-        tokensInRange: {},
+        rewards: {},
+        rewardsInRange: {},
+        rewardsDistributed: {},
+        rewardsDistributedInRange: {},
         users: {},
     };
 
     for (const t of st.rewardTokens) {
-        r.tokens[t] = st.totalRewards[t].integerValue();
-        r.tokensInRange[t] = st.totalRewardsInRange[t].integerValue();
+        r.rewards[t] = st.totalRewards[t].integerValue();
+        r.rewardsInRange[t] = st.totalRewardsInRange[t].integerValue();
     }
     for (const u of _.values(st.users)) {
         r.users[u.user] = {
@@ -167,6 +178,9 @@ const get_rewards = (st: GeyserState, cycle: number): Rewards => {
             rewardInRange: u.rewardInRange,
         };
     }
+    const { rewards, rewardsInRange } = get_distributed(r);
+    r.rewardsDistributed = rewards;
+    r.rewardsDistributedInRange = rewardsInRange;
     return r;
 };
 
@@ -178,18 +192,26 @@ const sum_rewards = (rewards: Rewards[]) => {
         rewards.every((r) => r.cycle === cycle),
         "sum_rewards: not all rewards same cycle"
     );
-    const tokens = _.union(_.flatten(rewards.map((r) => _.keys(r.tokens)))).sort();
+    const tokens = _.union(_.flatten(rewards.map((r) => _.keys(r.rewards)))).sort();
     const useraddrs = _.union(_.flatten(rewards.map((r) => _.keys(r.users)))).sort();
     const comb: Rewards = {
         cycle,
-        tokens: create_rewards(tokens),
+        rewards: create_rewards(tokens),
+        rewardsInRange: create_rewards(tokens),
+        rewardsDistributed: create_rewards(tokens),
+        rewardsDistributedInRange: create_rewards(tokens),
         users: create_u_rewards(useraddrs, tokens),
-        tokensInRange: create_rewards(tokens),
     };
     for (const r of rewards) {
-        for (const t of _.keys(r.tokens)) {
-            comb.tokens[t] = comb.tokens[t].plus(r.tokens[t]);
-            comb.tokensInRange[t] = comb.tokensInRange[t].plus(r.tokensInRange[t]);
+        for (const t of _.keys(r.rewards)) {
+            comb.rewards[t] = comb.rewards[t].plus(r.rewards[t]);
+            comb.rewardsInRange[t] = comb.rewardsInRange[t].plus(r.rewardsInRange[t]);
+            comb.rewardsDistributed[t] = comb.rewardsDistributed[t].plus(
+                r.rewardsDistributed[t]
+            );
+            comb.rewardsDistributedInRange[t] = comb.rewardsDistributedInRange[t].plus(
+                r.rewardsDistributedInRange[t]
+            );
         }
         for (const u of _.keys(r.users)) {
             for (const t of _.keys(r.users[u].reward)) {
@@ -207,59 +229,62 @@ const sum_rewards = (rewards: Rewards[]) => {
     return comb;
 };
 
-const compare_rewards = (r0: Rewards, r1: Rewards) => {
-    const tokens = _.keys(r0.tokens).sort();
-    if (!_.isEqual(tokens, _.keys(r1.tokens).sort())) return false;
+const get_distributed = (r: Rewards) => {
+    const rewards = create_rewards(_.keys(r.rewards));
+    const rewardsInRange = create_rewards(_.keys(r.rewardsInRange));
+    for (const u of _.values(r.users)) {
+        for (const t of _.keys(u.reward)) {
+            rewards[t] = rewards[t] || new BigNumber(0);
+            rewards[t] = rewards[t].plus(u.reward[t]);
+        }
+        for (const t of _.keys(u.reward)) {
+            rewardsInRange[t] = rewardsInRange[t] || new BigNumber(0);
+            rewardsInRange[t] = rewardsInRange[t].plus(u.rewardInRange[t]);
+        }
+    }
+    return { rewards, rewardsInRange };
+};
+
+const compare_distributed = (r0: Rewards, r1: Rewards) => {
+    const tokens = _.keys(r0.rewards).sort();
+    if (!_.isEqual(tokens, _.keys(r1.rewards).sort())) return false;
     const users = _.keys(r0.users).sort();
     if (!_.isEqual(users, _.keys(r1.users).sort())) return false;
+    if (!compare_token_rewards([r0.rewardsDistributed, r1.rewardsDistributed]))
+        return false;
     if (
-        !tokens.every((t) =>
-            r0.tokens[t]
-                .minus(r1.tokens[t])
-                .abs()
-                .lt(pow10(r0.tokens[t].toFixed().length - 2))
+        !compare_token_rewards([
+            r0.rewardsDistributedInRange,
+            r1.rewardsDistributedInRange
+        ]
         )
     )
         return false;
-    if (
-        !tokens.every((t) =>
-            r0.tokensInRange[t]
-                .minus(r1.tokensInRange[t])
-                .abs()
-                .lt(pow10(r0.tokensInRange[t].toFixed().length - 2))
-        )
-    )
-        return false;
-    if (
-        !users.every((u, i) => {
-            const tokens = _.keys(r0.users[u].reward).sort();
-            const tokensInRange = _.keys(r0.users[u].rewardInRange).sort();
-            if (!_.isEqual(tokens, _.keys(r1.users[u].reward).sort())) return false;
-            if (!_.isEqual(tokensInRange, _.keys(r1.users[u].rewardInRange).sort()))
-                return false;
+    return true;
+};
 
-            if (
-                !tokens.every((t) =>
-                    r0.users[u].reward[t]
-                        .minus(r1.users[u].reward[t])
-                        .abs()
-                        .lt(pow10(r0.users[u].reward[t].toFixed().length - 4))
-                )
-            )
-                return false;
-            if (
-                !tokens.every((t) =>
-                    r0.users[u].rewardInRange[t]
-                        .minus(r1.users[u].rewardInRange[t])
-                        .abs()
-                        .lt(pow10(r0.users[u].rewardInRange[t].toFixed().length - 4))
-                )
-            )
-                return false;
-            return true;
-        })
-    )
-        return false;
+const compare_rewards = (r0: Rewards, r1: Rewards) => {
+    const tokens = _.keys(r0.rewards).sort();
+    if (!_.isEqual(tokens, _.keys(r1.rewards).sort())) return false;
+    const users = _.keys(r0.users).sort();
+    if (!_.isEqual(users, _.keys(r1.users).sort())) return false;
+    if (!compare_token_rewards([r0.rewards, r1.rewards])) return false;
+    if (!compare_token_rewards([r0.rewardsInRange, r1.rewardsInRange])) return false;
+    return compare_distributed(r0, r1) && compare_users(r0, r1);
+};
+
+const compare_users = (r0: Rewards, r1: Rewards) => {
+    const tokens = _.keys(r0.rewards).sort();
+    if (!_.isEqual(tokens, _.keys(r1.rewards).sort())) return false;
+    const users = _.keys(r0.users).sort();
+    if (!_.isEqual(users, _.keys(r1.users).sort())) return false;
+    for (const u of users) {
+        if (
+            !compare_token_rewards([r0.users[u].reward, r1.users[u].reward]) ||
+            !compare_token_rewards([r0.users[u].rewardInRange, r1.users[u].rewardInRange])
+        )
+            return false;
+    }
     return true;
 };
 
@@ -280,16 +305,18 @@ const create_u_rewards = (users: string[], tokens: string[]) =>
 const combine_rewards = (cycle: number, rewards: Rewards[]) => {
     let curcycle: number = 0;
 
-    const tokens = _.union(_.flatten(rewards.map((r) => _.keys(r.tokens)))).sort();
+    const tokens = _.union(_.flatten(rewards.map((r) => _.keys(r.rewards)))).sort();
     const tokensInRange = _.union(
-        _.flatten(rewards.map((r) => _.keys(r.tokensInRange)))
+        _.flatten(rewards.map((r) => _.keys(r.rewardsInRange)))
     ).sort();
     const users = _.union(_.flatten(rewards.map((r) => _.keys(r.users)))).sort();
 
     const comb: Rewards = {
         cycle,
-        tokens: create_rewards(tokens),
-        tokensInRange: create_rewards(tokensInRange),
+        rewards: create_rewards(tokens),
+        rewardsInRange: create_rewards(tokensInRange),
+        rewardsDistributed: create_rewards(tokens),
+        rewardsDistributedInRange: create_rewards(tokensInRange),
         users: create_u_rewards(users, tokens),
     };
     for (const r of rewards) {
@@ -298,10 +325,17 @@ const combine_rewards = (cycle: number, rewards: Rewards[]) => {
             `combine_rewards: missing cycle ${curcycle + 1}`
         );
         curcycle++;
-        for (const t of _.keys(r.tokens)) {
-            comb.tokens[t] = r.tokens[t];
-            comb.tokensInRange[t] = comb.tokensInRange[t] || new BigNumber(0);
-            comb.tokensInRange[t] = comb.tokensInRange[t].plus(r.tokensInRange[t]);
+        for (const t of _.keys(r.rewards)) {
+            // only increasing cycles -> rewards just get set to the last Reward
+            comb.rewards[t] = r.rewards[t];
+            comb.rewardsDistributed[t] = r.rewardsDistributed[t];
+            comb.rewardsInRange[t] = comb.rewardsInRange[t] || new BigNumber(0);
+            comb.rewardsInRange[t] = comb.rewardsInRange[t].plus(r.rewardsInRange[t]);
+            comb.rewardsDistributedInRange[t] =
+                comb.rewardsDistributedInRange[t] || new BigNumber(0);
+            comb.rewardsDistributedInRange[t] = comb.rewardsDistributedInRange[t].plus(
+                r.rewardsInRange[t]
+            );
         }
         for (const u of _.keys(r.users)) {
             // TODO: ensure new reward sum of old reward + new in range
@@ -323,38 +357,31 @@ const combine_rewards = (cycle: number, rewards: Rewards[]) => {
     return comb;
 };
 
-const validate_token_rewards = (r: TokenReward[]) => {
+const compare_token_rewards = (r: TokenReward[]) => {
     const rest = r.slice(1);
     return _.keys(r[0]).every((addr, i) =>
         rest.every((t) =>
             r[0][addr]
                 .minus(t[addr])
                 .abs()
-                .lt(pow10(r[0][addr].toFixed().length - 4))
+                .lt(pow10(r[0][addr].toFixed(0).length - 2))
         )
     );
 };
 
 const validate_rewards = (r: Rewards) => {
-    const acc: { tokenReward: TokenReward; tokenRewardInRange: TokenReward } = {
-        tokenReward: {},
-        tokenRewardInRange: {},
-    };
-    for (const u of _.values(r.users)) {
-        for (const t of _.keys(u.reward)) {
-            acc.tokenReward[t] = acc.tokenReward[t] || new BigNumber(0);
-            acc.tokenReward[t] = acc.tokenReward[t].plus(u.reward[t]);
-        }
-        for (const t of _.keys(u.rewardInRange)) {
-            acc.tokenRewardInRange[t] = acc.tokenRewardInRange[t] || new BigNumber(0);
-            acc.tokenRewardInRange[t] = acc.tokenRewardInRange[t].plus(
-                u.rewardInRange[t]
-            );
-        }
-    }
     return (
-        validate_token_rewards([acc.tokenReward, r.tokens]) &&
-        validate_token_rewards([acc.tokenRewardInRange, r.tokensInRange])
+        validate_distributed(r) &&
+        compare_token_rewards([r.rewardsDistributed, r.rewards]) &&
+        compare_token_rewards([r.rewardsDistributedInRange, r.rewardsInRange])
+    );
+};
+
+const validate_distributed = (r: Rewards) => {
+    const { rewards, rewardsInRange } = get_distributed(r);
+    return (
+        compare_token_rewards([rewards, r.rewardsDistributed]) &&
+        compare_token_rewards([rewardsInRange, r.rewardsDistributedInRange])
     );
 };
 
@@ -412,7 +439,8 @@ const fetch_system_rewards = async (
     startBlock: number,
     endBlock: number,
     endTime: number,
-    cycle: number
+    cycle: number,
+    validate: boolean = true
 ) => {
     const absTime = await provider.getBlock(startBlock).then((b) => b.timestamp);
     const config = await fetch_system_config(provider, geysers);
@@ -420,7 +448,9 @@ const fetch_system_rewards = async (
     const calc = create_calc_system_stakes(config);
     const system = calc(acts, absTime, absTime, endTime);
     const r = get_system_rewards(system, cycle);
-    assert(validate_rewards(r), "fetched rewards did not validate");
+    if (validate) {
+        assert(validate_rewards(r), "fetched rewards did not validate");
+    }
     return r;
 };
 
@@ -431,7 +461,8 @@ const play_system_rewards = async (
     startBlock: number,
     endBlock: number,
     relTime: number,
-    endTime: number
+    endTime: number,
+    validate: boolean = true
 ) => {
     const absTime = await provider.getBlock(startBlock).then((b) => b.timestamp);
     const config = await fetch_system_config(provider, geysers);
@@ -442,8 +473,10 @@ const play_system_rewards = async (
     const ra = get_system_rewards(systemAbs, lastRewards.cycle + 1);
     const rr = get_system_rewards(systemRel, lastRewards.cycle + 1);
     const comb = combine_rewards(lastRewards.cycle + 1, [lastRewards, rr]);
-    assert(compare_rewards(ra, comb), "played rewards did not match total replay");
-    assert(validate_rewards(ra), "played rewards did not validate");
+    if (validate) {
+        assert(compare_rewards(ra, comb), "played rewards did not match total replay");
+        assert(validate_rewards(ra), "played rewards did not validate");
+    }
     return ra;
 };
 
@@ -483,7 +516,9 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
     ) => {
         let st = create_g(absTime, relTime, endTime);
         process_actions(st, acts);
-
+        // const { rewards, rewardsInRange } = calc_rewards_from_users(st);
+        // st.totalDistributed = rewards;
+        // st.totalDistributedInRange = rewardsInRange;
         return st;
     };
 
@@ -587,7 +622,7 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
         return total;
     };
 
-    const calc_all_rewards = (st: GeyserState, ts: number) => {
+    const calc_all_rewards = (st: GeyserState, ds: dState, ts: number) => {
         const relguard = _.max([st.relTime, st.lastUpdate])!;
         const absguard = _.max([st.absTime, st.lastUpdate])!;
         for (const t of st.rewardTokens) {
@@ -596,43 +631,39 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
             if (ts > st.lastUpdate) {
                 // TODO: FIX/make diff state for slice, also w/ user
                 if (ts > st.relTime) {
-                    st.totalRewardsInRange[t] =
-                        // st.totalRewardsInRange[t].plus(
-                        calc_token_reward(st, t, relguard, ts);
-                    // );
+                    ds.totalRewardsInRange[t] = calc_token_reward(st, t, relguard, ts);
+                    st.totalRewardsInRange[t] = st.totalRewardsInRange[t].plus(
+                        calc_token_reward(st, t, relguard, ts)
+                    );
                 }
-                st.totalRewards[t] =
-                    // st.totalRewards[t].plus(
-                    calc_token_reward(st, t, absguard, ts);
-                // );
+                ds.totalRewards[t] = calc_token_reward(st, t, absguard, ts);
+                st.totalRewards[t] = st.totalRewards[t].plus(
+                    calc_token_reward(st, t, absguard, ts)
+                );
             }
         }
         st.lastUpdate = ts;
     };
 
-    const calc_users_rewards = (
-        st: GeyserState,
-        gss: GeyserShareSeconds,
-        ts: number
-    ) => {
+    const calc_users_rewards = (st: GeyserState, ds: dState, ts: number) => {
         for (const u of _.values(st.users)) {
-            const uss = gss.users[u.user];
+            const du = ds.users[u.user];
             if (ts >= st.absTime && ts <= st.endTime) {
                 for (const t of st.rewardTokens) {
-                    let tr = st.totalRewards[t];
-                    let trir = st.totalRewardsInRange[t];
+                    let dtr = ds.totalRewards[t];
+                    let dtrir = ds.totalRewardsInRange[t];
                     u.reward[t] = u.reward[t] || new BigNumber(0);
                     u.rewardInRange[t] = u.rewardInRange[t] || new BigNumber(0);
-                    if (gss.totalShareSeconds.gt(0)) {
+                    if (ds.totalShareSeconds.gt(0)) {
                         u.reward[t] = u.reward[t].plus(
-                            tr.times(uss.shareSeconds).div(gss.totalShareSeconds)
+                            dtr.times(du.shareSeconds).div(ds.totalShareSeconds)
                         );
                     }
-                    if (gss.totalShareSecondsRange.gt(0)) {
+                    if (ds.totalShareSecondsRange.gt(0)) {
                         u.rewardInRange[t] = u.rewardInRange[t].plus(
-                            trir
-                                .times(uss.shareSecondsRange)
-                                .div(gss.totalShareSecondsRange)
+                            dtrir
+                                .times(du.shareSecondsRange)
+                                .div(ds.totalShareSecondsRange)
                         );
                     }
                 }
@@ -640,9 +671,9 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
         }
     };
     const process_share_seconds = (st: GeyserState, ts: number) => {
-        const gss = create_gss(_.keys(st.users), st.rewardTokens);
+        const ds = create_ds(_.keys(st.users), st.rewardTokens);
         for (const u of _.values(st.users)) {
-            const uss = gss.users[u.user];
+            const du = ds.users[u.user];
             if (!u) {
                 return;
             }
@@ -665,15 +696,15 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
                     toAdd = toAdd.plus(stake.shares.times(ts - abstime));
                 }
             }
-            uss.shareSeconds = toAdd;
-            uss.shareSecondsRange = toAddInRange;
+            du.shareSeconds = toAdd;
+            du.shareSecondsRange = toAddInRange;
             u.lastUpdate = ts;
-            gss.totalShareSeconds = gss.totalShareSeconds.plus(toAdd);
-            gss.totalShareSecondsRange = gss.totalShareSecondsRange.plus(toAddInRange);
+            ds.totalShareSeconds = ds.totalShareSeconds.plus(toAdd);
+            ds.totalShareSecondsRange = ds.totalShareSecondsRange.plus(toAddInRange);
         }
 
-        calc_all_rewards(st, ts);
-        calc_users_rewards(st, gss, ts);
+        calc_all_rewards(st, ds, ts);
+        calc_users_rewards(st, ds, ts);
     };
 
     const create_g = (
@@ -692,17 +723,19 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
         lastUpdate: absTime - 1,
     });
 
-    const create_gss = (users: string[], tokens: string[]): GeyserShareSeconds => ({
+    const create_ds = (users: string[], tokens: string[]): dState => ({
         users: _.transform(
             users,
-            (acc: { [u: string]: UserShareSeconds }, user, {}) =>
-                (acc[user] = create_uss(user, tokens))
+            (acc: { [u: string]: dUser }, user, {}) =>
+                (acc[user] = create_du(user, tokens))
         ),
         totalShareSecondsRange: new BigNumber(0),
         totalShareSeconds: new BigNumber(0),
+        totalRewardsInRange: create_rewards(tokens),
+        totalRewards: create_rewards(tokens),
     });
 
-    const create_uss = (user: string, tokens: string[]): UserShareSeconds => ({
+    const create_du = (user: string, tokens: string[]): dUser => ({
         user,
         shareSecondsRange: new BigNumber(0),
         shareSeconds: new BigNumber(0),
@@ -734,4 +767,7 @@ export {
     validate_rewards,
     fetch_system_rewards,
     play_system_rewards,
+    validate_distributed,
+    compare_distributed,
+    compare_users
 };

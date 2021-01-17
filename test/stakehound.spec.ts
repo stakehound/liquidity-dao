@@ -22,6 +22,7 @@ import {
     play_system_rewards,
     validate_rewards,
 } from "./src/calc_stakes";
+import { log_pair } from "./utils/test";
 import MultiMerkle, { rewards_to_claims, encode_claim } from "./src/MultiMerkle";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
@@ -127,47 +128,4 @@ describe("Stakehound", function () {
         );
         expect(_.isEqual(newBalances, expected)).to.eq(true);
     });
-
-    // it("test things", async function () {
-    //     const signers = await get_fake_accounts();
-    //     console.log(await Promise.all(signers.map((x) => x.getBalance())));
-    // });
-    // it("Mint some stakedFiro", async function () {
-    //     let _sfiro = sfiro.connect(spcSigner);
-    //     let balance = await _sfiro.balanceOf(accounts[0]);
-    //     expect(balance).to.eq(0);
-    //     await _sfiro.mint(accounts[1], BigNumber.from(10).pow(18));
-    //     balance = await _sfiro.balanceOf(accounts[1]);
-    //     expect(balance).to.eq(BigNumber.from(10).pow(18));
-    // });
-    // it("Change supply", async function () {
-    //     console.log(`shares: ${(await sfiro.sharesOf(accounts[1])).toString()}`);
-    //     let _sfiro = sfiro.connect(spcSigner);
-    //     console.log(`balance: ${(await sfiro.balanceOf(accounts[1])).toString()}`);
-    //     await _sfiro.distributeTokens(BigNumber.from(10).pow(18).mul(50000), true);
-    //     console.log(`balance: ${(await sfiro.balanceOf(accounts[1])).toString()}`);
-    //     await _sfiro.distributeTokens(BigNumber.from(10).pow(18).mul(50000), false);
-    //     await _sfiro.distributeTokens(BigNumber.from(10).pow(18), false);
-    //     console.log(`balance: ${(await sfiro.balanceOf(accounts[1])).toString()}`);
-    //     await _sfiro.distributeTokens(
-    //         BigNumber.from(10).pow(18).mul(50000).add(BigNumber.from(10).pow(18)),
-    //         true
-    //     );
-    //     console.log(`balance: ${(await sfiro.balanceOf(accounts[1])).toString()}`);
-    // });
-    // it("Deposit some stakedFiro", async function () {
-    //     await sfiro.approve(geyser.address, MAX_NUMBER);
-    //     const sharesBefore = await sfiro.sharesOf(accounts[1]);
-    //     const txres = await geyser.stake(BigNumber.from(10).pow(18), "0x");
-    //     const txrec = await txres.wait(1);
-    //     const sharesAfter = await sfiro.sharesOf(accounts[1]);
-    //     const stakedC = sharesBefore.sub(sharesAfter);
-    //     const _logs = await ethers.provider.getLogs({
-    //         fromBlock: txrec.blockNumber,
-    //         toBlock: txrec.blockNumber,
-    //     });
-    //     const logs = tryParseLogs(_logs, [siface, giface]);
-    //     const stakedE = logs.find((x) => x.name === "Staked")!.args.shares;
-    //     expect(stakedE).to.eq(stakedC);
-    // });
 });
