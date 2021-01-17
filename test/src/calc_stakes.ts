@@ -8,7 +8,7 @@ import { StakehoundGeyser__factory } from "../../typechain";
 
 BigNumber.set({
     ROUNDING_MODE: BigNumber.ROUND_FLOOR,
-    DECIMAL_PLACES: 100,
+    DECIMAL_PLACES: 200,
     POW_PRECISION: 20,
 });
 
@@ -21,13 +21,23 @@ interface Schedules {
     [token: string]: UnlockScheduleAction[];
 }
 
+interface UserShareSeconds {
+    user: string;
+    shareSecondsRange: BigNumber;
+    shareSeconds: BigNumber;
+}
+
+interface GeyserShareSeconds {
+    users: { [user: string]: UserShareSeconds };
+    totalShareSeconds: BigNumber;
+    totalShareSecondsRange: BigNumber;
+}
+
 interface UserState {
     user: string;
     total: BigNumber;
     stakes: Stake[];
     lastUpdate: number;
-    shareSecondsRangeInSlice: BigNumber;
-    shareSecondsInSlice: BigNumber;
     reward: TokenReward;
     rewardInRange: TokenReward;
 }
@@ -88,8 +98,6 @@ interface GeyserState {
     totalRewards: TokenReward;
     totalRewardsInRange: TokenReward;
     rewardTokens: string[];
-    totalShareSecondsInSlice: BigNumber;
-    totalShareSecondsRangeInSlice: BigNumber;
     schedules: Schedules;
     absTime: number;
     relTime: number;
@@ -209,7 +217,7 @@ const compare_rewards = (r0: Rewards, r1: Rewards) => {
             r0.tokens[t]
                 .minus(r1.tokens[t])
                 .abs()
-                .lt(pow10(r0.tokens[t].toFixed().length - 4))
+                .lt(pow10(r0.tokens[t].toFixed().length - 2))
         )
     )
         return false;
@@ -218,11 +226,10 @@ const compare_rewards = (r0: Rewards, r1: Rewards) => {
             r0.tokensInRange[t]
                 .minus(r1.tokensInRange[t])
                 .abs()
-                .lt(pow10(r0.tokensInRange[t].toFixed().length - 4))
+                .lt(pow10(r0.tokensInRange[t].toFixed().length - 2))
         )
     )
         return false;
-
     if (
         !users.every((u, i) => {
             const tokens = _.keys(r0.users[u].reward).sort();
@@ -413,7 +420,7 @@ const fetch_system_rewards = async (
     const calc = create_calc_system_stakes(config);
     const system = calc(acts, absTime, absTime, endTime);
     const r = get_system_rewards(system, cycle);
-    // assert(validate_rewards(r), "fetched rewards did not validate");
+    assert(validate_rewards(r), "fetched rewards did not validate");
     return r;
 };
 
@@ -589,54 +596,53 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
             if (ts > st.lastUpdate) {
                 // TODO: FIX/make diff state for slice, also w/ user
                 if (ts > st.relTime) {
-                    st.totalRewardsInRange[t] = 
-                    // st.totalRewardsInRange[t].plus(
-                        calc_token_reward(st, t, relguard, ts)
+                    st.totalRewardsInRange[t] =
+                        // st.totalRewardsInRange[t].plus(
+                        calc_token_reward(st, t, relguard, ts);
                     // );
                 }
-                st.totalRewards[t] = 
-                // st.totalRewards[t].plus(
-                    calc_token_reward(st, t, absguard, ts)
+                st.totalRewards[t] =
+                    // st.totalRewards[t].plus(
+                    calc_token_reward(st, t, absguard, ts);
                 // );
             }
         }
         st.lastUpdate = ts;
     };
 
-    const calc_users_rewards = (st: GeyserState, ts: number) => {
+    const calc_users_rewards = (
+        st: GeyserState,
+        gss: GeyserShareSeconds,
+        ts: number
+    ) => {
         for (const u of _.values(st.users)) {
+            const uss = gss.users[u.user];
             if (ts >= st.absTime && ts <= st.endTime) {
                 for (const t of st.rewardTokens) {
                     let tr = st.totalRewards[t];
                     let trir = st.totalRewardsInRange[t];
                     u.reward[t] = u.reward[t] || new BigNumber(0);
                     u.rewardInRange[t] = u.rewardInRange[t] || new BigNumber(0);
-                    if (st.totalShareSecondsInSlice.gt(0)) {
+                    if (gss.totalShareSeconds.gt(0)) {
                         u.reward[t] = u.reward[t].plus(
-                            tr
-                                .times(u.shareSecondsInSlice)
-                                .div(st.totalShareSecondsInSlice)
+                            tr.times(uss.shareSeconds).div(gss.totalShareSeconds)
                         );
                     }
-                    if (st.totalShareSecondsRangeInSlice.gt(0)) {
+                    if (gss.totalShareSecondsRange.gt(0)) {
                         u.rewardInRange[t] = u.rewardInRange[t].plus(
                             trir
-                                .times(u.shareSecondsRangeInSlice)
-                                .div(st.totalShareSecondsRangeInSlice)
+                                .times(uss.shareSecondsRange)
+                                .div(gss.totalShareSecondsRange)
                         );
                     }
                 }
             }
-            u.shareSecondsInSlice = new BigNumber(0);
-            u.shareSecondsRangeInSlice = new BigNumber(0);
         }
-        st.totalShareSecondsInSlice = new BigNumber(0);
-        st.totalShareSecondsRangeInSlice = new BigNumber(0);
     };
     const process_share_seconds = (st: GeyserState, ts: number) => {
-        st.totalShareSecondsInSlice = new BigNumber(0);
-        st.totalShareSecondsRangeInSlice = new BigNumber(0);
+        const gss = create_gss(_.keys(st.users), st.rewardTokens);
         for (const u of _.values(st.users)) {
+            const uss = gss.users[u.user];
             if (!u) {
                 return;
             }
@@ -644,8 +650,6 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
             if (timeSinceLastAction <= 0) {
                 return;
             }
-            u.shareSecondsInSlice = new BigNumber(0);
-            u.shareSecondsRangeInSlice = new BigNumber(0);
             let toAdd = new BigNumber(0);
             let toAddInRange = new BigNumber(0);
 
@@ -661,17 +665,15 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
                     toAdd = toAdd.plus(stake.shares.times(ts - abstime));
                 }
             }
-            u.shareSecondsInSlice = toAdd;
-            u.shareSecondsRangeInSlice = toAddInRange;
+            uss.shareSeconds = toAdd;
+            uss.shareSecondsRange = toAddInRange;
             u.lastUpdate = ts;
-            st.totalShareSecondsInSlice = st.totalShareSecondsInSlice.plus(toAdd);
-            st.totalShareSecondsRangeInSlice = st.totalShareSecondsRangeInSlice.plus(
-                toAddInRange
-            );
+            gss.totalShareSeconds = gss.totalShareSeconds.plus(toAdd);
+            gss.totalShareSecondsRange = gss.totalShareSecondsRange.plus(toAddInRange);
         }
 
         calc_all_rewards(st, ts);
-        calc_users_rewards(st, ts);
+        calc_users_rewards(st, gss, ts);
     };
 
     const create_g = (
@@ -687,9 +689,23 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
         schedules: {},
         totalRewards: {},
         totalRewardsInRange: {},
-        totalShareSecondsRangeInSlice: new BigNumber(0),
-        totalShareSecondsInSlice: new BigNumber(0),
         lastUpdate: absTime - 1,
+    });
+
+    const create_gss = (users: string[], tokens: string[]): GeyserShareSeconds => ({
+        users: _.transform(
+            users,
+            (acc: { [u: string]: UserShareSeconds }, user, {}) =>
+                (acc[user] = create_uss(user, tokens))
+        ),
+        totalShareSecondsRange: new BigNumber(0),
+        totalShareSeconds: new BigNumber(0),
+    });
+
+    const create_uss = (user: string, tokens: string[]): UserShareSeconds => ({
+        user,
+        shareSecondsRange: new BigNumber(0),
+        shareSeconds: new BigNumber(0),
     });
 
     const create_u = (user: string, tokens: string[]): UserState => ({
@@ -697,8 +713,6 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
         total: new BigNumber(0),
         stakes: [],
         lastUpdate: config.globalStartTime,
-        shareSecondsRangeInSlice: new BigNumber(0),
-        shareSecondsInSlice: new BigNumber(0),
         reward: create_rewards(tokens),
         rewardInRange: create_rewards(tokens),
     });

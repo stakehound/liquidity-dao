@@ -166,6 +166,7 @@ describe("Action tests", function () {
         });
 
         await unstake_all(con);
+        
         const newEnd = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
@@ -178,7 +179,6 @@ describe("Action tests", function () {
             startBlock.timestamp + 60 * 60 * 24 * 2,
             1
         );
-        log_pair(oneday, twodays);
         expect(validate_rewards(oneday)).to.eq(true);
         expect(validate_rewards(twodays)).to.eq(true);
         expect(compare_rewards(oneday, twodays)).to.eq(true);
