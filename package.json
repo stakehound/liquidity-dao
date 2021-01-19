@@ -11,6 +11,7 @@
         "@types/mocha": "^8.2.0",
         "@types/node": "^14.14.13",
         "@types/treeify": "^1.0.0",
+        "@types/yargs": "^15.0.12",
         "chai": "^4.2.0",
         "ethereum-waffle": "^3.2.1",
         "ethers": "^5.0.25",
@@ -50,6 +51,8 @@
         "dotenv": "^8.2.0",
         "ethereumjs-util": "^7.0.7",
         "lodash": "^4.17.20",
-        "treeify": "^1.1.0"
+        "treeify": "^1.1.0",
+        "yargs": "^16.2.0",
+        "zod": "^2.0.0-beta.30"
     }
 }

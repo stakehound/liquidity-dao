@@ -14,17 +14,21 @@ import S3 from "aws-sdk/clients/s3";
 import { upload_rewards, fetch_rewards } from "./s3";
 import MultiMerkle, { compare_merkle_rewards } from "./MultiMerkle";
 import { assert } from "ts-essentials";
+import { wait_for_block } from "./wait";
 
 const credentials = {
     accessKeyId: process.env.AWS_ACCESS_KEYID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
 };
 
-interface Config {
+interface Context {
     geysers: string[];
     startBlock: number;
     initDistribution: RewardsFixed;
     multiplexer: Multiplexer;
+    s3: S3;
+    provider: Provider;
+    rate: number;
     credentials: {
         accessKeyId: string;
         secretAccessKey: string;
@@ -34,23 +38,19 @@ interface Config {
 
 //  Proposer
 
-const init_rewards = async (
-    config: Config,
-    s3: S3,
-    provider: Provider,
-    endBlock: number
-) => {
+const init_rewards = async (context: Context, endBlock: number) => {
+    const { s3, provider } = context;
     const start = await provider.getBlock(endBlock);
     const end = await provider.getBlock(endBlock);
     const r = await fetch_system_rewards(
         provider,
-        config.geysers,
-        config.startBlock,
+        context.geysers,
+        context.startBlock,
         end.number,
         end.timestamp,
         1
     );
-    const rewards = sum_rewards([r, parse_rewards_fixed(config.initDistribution)]);
+    const rewards = sum_rewards([r, parse_rewards_fixed(context.initDistribution)]);
     assert(
         validate_rewards(rewards),
         "init_rewards: new calculated rewards with init distribution did not validate"
@@ -58,12 +58,12 @@ const init_rewards = async (
 
     const merkle = MultiMerkle.fromRewards(rewards);
     await upload_rewards(s3, merkle.merkleRewards);
-    const txr = await config.multiplexer
+    const txr = await context.multiplexer
         .proposeRoot(
             merkle.root,
             merkle.root,
             merkle.cycle,
-            config.startBlock,
+            context.startBlock,
             end.number
         )
         .then((x) => x.wait(1));
@@ -72,30 +72,26 @@ const init_rewards = async (
     );
 };
 
-const bump_rewards = async (
-    config: Config,
-    s3: S3,
-    provider: Provider,
-    endBlock: number
-) => {
-    const last = await config.multiplexer.lastPublishedMerkleData();
+const bump_rewards = async (context: Context, endBlock: number) => {
+    const { s3, provider } = context;
+    const last = await context.multiplexer.lastPublishedMerkleData();
     const lastStart = await provider.getBlock(last.startBlock.toNumber());
     const lastEnd = await provider.getBlock(last.endBlock.toNumber());
     assert(
-        lastStart.number === config.startBlock,
-        "bump_rewards: last published start block does not match configured start block"
+        lastStart.number === context.startBlock,
+        "bump_rewards: last published start block does not match contextured start block"
     );
     const r = await fetch_system_rewards(
         provider,
-        config.geysers,
-        config.startBlock,
+        context.geysers,
+        context.startBlock,
         lastEnd.number,
         lastEnd.timestamp,
         last.cycle.toNumber()
     );
     const calcLastRewards = sum_rewards([
         r,
-        parse_rewards_fixed(config.initDistribution),
+        parse_rewards_fixed(context.initDistribution),
     ]);
 
     assert(
@@ -117,8 +113,8 @@ const bump_rewards = async (
     const newRewards = await play_system_rewards(
         r,
         provider,
-        config.geysers,
-        config.startBlock,
+        context.geysers,
+        context.startBlock,
         nextEnd.number,
         lastEnd.timestamp,
         nextEnd.timestamp
@@ -126,7 +122,7 @@ const bump_rewards = async (
 
     const newWithInit = sum_rewards([
         newRewards,
-        parse_rewards_fixed(config.initDistribution),
+        parse_rewards_fixed(context.initDistribution),
     ]);
 
     assert(
@@ -135,12 +131,12 @@ const bump_rewards = async (
     );
     const merkle = MultiMerkle.fromRewards(newWithInit);
     await upload_rewards(s3, merkle.merkleRewards);
-    const txr = await config.multiplexer
+    const txr = await context.multiplexer
         .proposeRoot(
             merkle.root,
             merkle.root,
             merkle.cycle,
-            config.startBlock,
+            context.startBlock,
             nextEnd.number
         )
         .then((x) => x.wait(1));
@@ -151,9 +147,10 @@ const bump_rewards = async (
 
 // Approver
 
-const approve_rewards = async (config: Config, s3: S3, provider: Provider) => {
-    const proposed = await config.multiplexer.lastProposedMerkleData();
-    const published = await config.multiplexer.lastPublishedMerkleData();
+const approve_rewards = async (context: Context) => {
+    const { s3, provider } = context;
+    const proposed = await context.multiplexer.lastProposedMerkleData();
+    const published = await context.multiplexer.lastPublishedMerkleData();
     assert(
         published.cycle < proposed.cycle,
         "approve_rewards: proposed cycle not greater than last published cycle"
@@ -161,20 +158,20 @@ const approve_rewards = async (config: Config, s3: S3, provider: Provider) => {
     const proposedStart = await provider.getBlock(proposed.startBlock.toNumber());
     const proposedEnd = await provider.getBlock(proposed.endBlock.toNumber());
     assert(
-        proposedStart.number === config.startBlock,
-        "approve_rewards: proposed published start block does not match configured start block"
+        proposedStart.number === context.startBlock,
+        "approve_rewards: proposed published start block does not match contextured start block"
     );
     const r = await fetch_system_rewards(
         provider,
-        config.geysers,
-        config.startBlock,
+        context.geysers,
+        context.startBlock,
         proposedEnd.number,
         proposedEnd.timestamp,
         proposed.cycle.toNumber()
     );
     const calcedRewards = sum_rewards([
         r,
-        parse_rewards_fixed(config.initDistribution),
+        parse_rewards_fixed(context.initDistribution),
     ]);
     assert(
         validate_rewards(calcedRewards),
@@ -191,16 +188,42 @@ const approve_rewards = async (config: Config, s3: S3, provider: Provider) => {
         compare_merkle_rewards(fetchedRewards, merkle.merkleRewards),
         "approve_rewards: fetched rewards did not match calculated"
     );
-    const txr = await config.multiplexer
+    const txr = await context.multiplexer
         .approveRoot(
             merkle.root,
             merkle.root,
             merkle.cycle,
-            config.startBlock,
+            context.startBlock,
             proposedEnd.number
         )
         .then((x) => x.wait(1));
     console.log(`Approving merkle root ${merkle.root} ${txr.transactionHash}`);
 };
 
-export { init_rewards, bump_rewards, approve_rewards };
+const run_init = async (context: Context) => {
+    const { provider } = context;
+    let current_block = await provider.getBlock((await provider.getBlockNumber()) - 30);
+    if (current_block.number < context.startBlock) {
+        current_block = await wait_for_block(
+            provider,
+            context.startBlock,
+            context.rate
+        );
+    }
+    await init_rewards(context, current_block.number);
+};
+
+const run_propose = async (context: Context) => {
+    const { provider } = context;
+    let current_block = await provider.getBlock((await provider.getBlockNumber()) - 30);
+    assert(
+        current_block.number < context.startBlock,
+        "run_propose: not yet past start block"
+    );
+    current_block = await wait_for_block(provider, context.startBlock, context.rate);
+
+    await bump_rewards(context, current_block.number);
+};
+
+
+export { Context, init_rewards, bump_rewards, approve_rewards, run_init, run_propose };
