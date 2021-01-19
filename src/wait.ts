@@ -18,17 +18,12 @@ const wait_for_block = async (
 };
 
 const wait_for_time = async (provider: Provider, time: number, rate: number) => {
-    let b = await provider.getBlock("latest");
+    let b = await provider.getBlock(await provider.getBlockNumber() - 30);
     while (b.timestamp < time) {
         await sleep(rate);
-        b = await provider.getBlock("latest");
+        b = await provider.getBlock(await provider.getBlockNumber() - 30);
     }
-    let confirmed = b.number + 30;
-    while (b.number < confirmed) {
-        await sleep(rate);
-        b = await provider.getBlock("latest");
-    }
-    return provider.getBlock(0);
+    return b;
 };
 
 const wait_for_next_proposed = async (
@@ -42,10 +37,13 @@ const wait_for_next_proposed = async (
     if (last.cycle.toNumber() === cycle) {
         return last;
     }
+    if (last.cycle.toNumber() > cycle) {
+        throw new Error("wait_for_next_proposed: expected cycle already passed");
+    }
     const filter = {
         address: multiplexer.address,
-        fromBlock: block.number,
-        topics: [multiplexer.interface.getSighash("RootProposed")],
+        fromBlock: block.number - 60,
+        topics: [multiplexer.interface.getEventTopic("RootProposed")],
     };
     let done = false;
     await sleep(rate);
@@ -64,8 +62,10 @@ const wait_for_next_proposed = async (
             try {
                 const parsed = multiplexer.interface.parseLog(log);
                 if (parsed.name === "RootProposed") {
-                    proposedBlocks.push(log.blockNumber);
-                    done = true;
+                    if (parsed.args.cycle.toNumber() >= cycle) {
+                        proposedBlocks.push(log.blockNumber);
+                        done = true;
+                    }
                 } else {
                     console.error(
                         `wait_for_next_proposed: unexpected event ${log} ${parsed}`
@@ -77,9 +77,10 @@ const wait_for_next_proposed = async (
                 );
             }
         }
+        filter.fromBlock = bn
     }
     const proposeBlock = _.last(proposedBlocks)!;
     return multiplexer.lastProposedMerkleData({ blockTag: proposeBlock });
 };
 
-export { wait_for_block, wait_for_next_proposed, wait_for_time };
+export { wait_for_block, wait_for_next_proposed, wait_for_time, sleep };

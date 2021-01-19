@@ -22,7 +22,12 @@ import {
     validate_rewards,
 } from "../src/calc_stakes";
 import { log_pair } from "./utils/test";
-import { wait_for_next_proposed, wait_for_block, wait_for_time } from "../src/wait";
+import {
+    wait_for_next_proposed,
+    wait_for_block,
+    wait_for_time,
+    sleep,
+} from "../src/wait";
 import MultiMerkle, { rewards_to_claims, encode_claim } from "../src/MultiMerkle";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import S3 from "aws-sdk/clients/s3";
@@ -78,7 +83,7 @@ describe("Stakehound", function () {
         ({ multiplexer } = context);
     });
     it("rewards type", async function () {
-        this.timeout(20000);
+        this.timeout(100000);
         const startBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
@@ -118,20 +123,20 @@ describe("Stakehound", function () {
         const waitP = wait_for_next_proposed(
             ethers.provider,
             multiplexer,
-            newr.cycle.toNumber(),
+            newr.cycle.toNumber() + 1,
             1000
         );
-        await HRE.network.provider.request({
-            method: "evm_setNextBlockTimestamp",
-            params: [endBlock.timestamp + 60 * 60 * 24],
-        });
-        await signers[0].sendTransaction({ value: 0, to: signers[0].address });
+        for (let i = 0; i < 40; i++) {
+            await HRE.network.provider.request({
+                method: "evm_mine",
+            });
+        }
         const nextEndBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
         await bump_rewards(config, s3, ethers.provider, nextEndBlock.number);
         await approve_rewards(config, s3, ethers.provider);
-        // console.log('got block!', await waitP)
+        expect((await waitP).cycle.toNumber()).to.eq(newr.cycle.toNumber() + 1);
         const last = await multiplexer.lastPublishedMerkleData();
         const rewards = await fetch_rewards(s3, last.root);
         const m = MultiMerkle.fromMerkleRewards(last.cycle.toNumber(), rewards);
@@ -160,5 +165,25 @@ describe("Stakehound", function () {
             b!.add(c!).toString()
         );
         expect(_.isEqual(newBalances, expected)).to.eq(true);
+    });
+    it("test wait_for_block", async function () {
+        this.timeout(100000);
+        const block = await ethers.provider.getBlock("latest");
+        const wtime = block.timestamp + 60 * 60 * 24;
+        const wp = wait_for_time(ethers.provider, wtime, 1000);
+        await HRE.network.provider.request({
+            method: "evm_setNextBlockTimestamp",
+            params: [wtime],
+        });
+        await sleep(2000);
+        let p: Promise<any> = Promise.resolve();
+        for (let i = 0; i < 40; i++) {
+            await HRE.network.provider.request({
+                method: "evm_mine",
+            });
+        }
+        await p;
+        const wb = await wp;
+        expect(wb.timestamp).to.gte(wtime);
     });
 });
