@@ -8,6 +8,6 @@
         "resolveJsonModule": true,
         "preserveSymlinks": true
     },
-    "include": ["./scripts", "./test"],
+    "include": ["./scripts", "./test", "src"],
     "files": ["./hardhat.config.ts", "./declarations.d.ts"]
 }

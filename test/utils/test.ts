@@ -1,5 +1,6 @@
-import _ from 'lodash'
-import { Rewards } from "../src/calc_stakes";
+import _ from "lodash";
+import { Rewards } from "../../src/calc_stakes";
+import { MerkleRewards } from "../../src/MultiMerkle";
 
 const log_pair = (r0: Rewards, r1: Rewards) => {
     console.log("users");
@@ -51,5 +52,22 @@ const log_pair = (r0: Rewards, r1: Rewards) => {
     );
 };
 
+const log_merkle_pair = (r0: MerkleRewards, r1: MerkleRewards) => {
+    console.log("users");
+    console.log(
+        _.zip(
+            _.values(r0.claims).map((u) => u.amounts),
+            _.values(r1.claims).map((u) => u.amounts)
+        )
+    );
+    console.log("users in range");
+    console.log("tokens");
+    console.log(
+        _.zip(
+            _.values(r0.tokenTotals),
+            _.values(r1.tokenTotals)
+        )
+    );
+};
 
-export { log_pair }
+export { log_pair, log_merkle_pair };

@@ -2,36 +2,27 @@ import { expect, use } from "chai";
 import HRE, { ethers } from "hardhat";
 import { solidity } from "ethereum-waffle";
 import { Signer, BigNumber } from "ethers";
-import { getAccounts } from "./utils";
 import _ from "lodash";
-import { StakehoundGeyser, Multiplexer, MerkleMock__factory } from "../typechain";
+import { StakehoundGeyser, Multiplexer } from "../typechain";
 import {
     deploy_test,
     init_test,
     DeployTestContext,
     unstake_all,
-} from "./src/deploy-test";
-import { JsonRpcSigner, Log } from "@ethersproject/providers";
+} from "./utils/deploy-test";
+import { Log } from "@ethersproject/providers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
-import stakedTokenAbi from "./src/abi/StakedToken.json";
-import { StakedToken, StakedToken__factory } from "./src/types";
+import stakedTokenAbi from "../src/abi/StakedToken.json";
+import { StakedToken, } from "../src/types";
 import { Interface, LogDescription } from "ethers/lib/utils";
-import { fetchEvents, collectActions } from "./src/events";
-import { keccak256 } from "ethereumjs-util";
 import {
     fetch_system_rewards,
-    create_calc_geyser_stakes,
-    get_rewards,
-    combine_rewards,
     compare_rewards,
     compare_users,
-    play_system_rewards,
     validate_rewards,
     compare_distributed,
     validate_distributed,
-    Rewards,
-} from "./src/calc_stakes";
-import MultiMerkle, { rewards_to_claims, encode_claim } from "./src/MultiMerkle";
+} from "../src/calc_stakes";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 
 const giface = new ethers.utils.Interface(
@@ -41,26 +32,8 @@ const siface = new ethers.utils.Interface(stakedTokenAbi) as StakedToken["interf
 
 use(solidity);
 
-const MAX_NUMBER = BigNumber.from(
-    "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-);
-
-function tryParseLogs(logs: Log[], ifaces: Interface[]) {
-    const out: LogDescription[] = [];
-    for (const log of logs) {
-        for (const iface of ifaces) {
-            try {
-                out.push(iface.parseLog(log));
-                break;
-            } catch (e) {}
-        }
-    }
-    return out;
-}
-
 describe("Action tests", function () {
     let signers: SignerWithAddress[];
-    let multiplexer: Multiplexer;
     let con: DeployTestContext;
     this.beforeAll(async function () {
         this.timeout(100000);
@@ -69,7 +42,6 @@ describe("Action tests", function () {
     this.beforeEach(async function () {
         this.timeout(100000);
         con = await deploy_test();
-        ({ multiplexer } = con);
     });
     it("clear schedules stops rewards from accumulating", async function () {
         this.timeout(100000);

@@ -2,16 +2,15 @@ import { expect, use } from "chai";
 import HRE, { ethers } from "hardhat";
 import { solidity } from "ethereum-waffle";
 import { Signer, BigNumber } from "ethers";
-import { getAccounts } from "./utils";
 import _ from "lodash";
 import { StakehoundGeyser, Multiplexer, MerkleMock__factory } from "../typechain";
-import { deploy_test, init_test, DeployTestContext } from "./src/deploy-test";
+import { deploy_test, init_test, DeployTestContext } from "./utils/deploy-test";
 import { JsonRpcSigner, Log } from "@ethersproject/providers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
-import stakedTokenAbi from "./src/abi/StakedToken.json";
-import { StakedToken, StakedToken__factory } from "./src/types";
-import { Interface, LogDescription } from "ethers/lib/utils";
-import { fetchEvents, collectActions } from "./src/events";
+import stakedTokenAbi from "../src/abi/StakedToken.json";
+import { StakedToken, StakedToken__factory } from "../src/types";
+import { Interface, LogDescription, BytesLike } from "ethers/lib/utils";
+import { fetchEvents, collectActions } from "../src/events";
 import { keccak256 } from "ethereumjs-util";
 import {
     fetch_system_rewards,
@@ -21,11 +20,15 @@ import {
     compare_rewards,
     play_system_rewards,
     validate_rewards,
-} from "./src/calc_stakes";
+} from "../src/calc_stakes";
 import { log_pair } from "./utils/test";
-import MultiMerkle, { rewards_to_claims, encode_claim } from "./src/MultiMerkle";
+import { wait_for_next_proposed, wait_for_block, wait_for_time } from "../src/wait";
+import MultiMerkle, { rewards_to_claims, encode_claim } from "../src/MultiMerkle";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-
+import S3 from "aws-sdk/clients/s3";
+import cids from "cids";
+import { upload_rewards, fetch_rewards } from "../src/s3";
+import { approve_rewards, init_rewards, bump_rewards } from "../src/system";
 const giface = new ethers.utils.Interface(
     geyserAbi.abi
 ) as StakehoundGeyser["interface"];
@@ -50,10 +53,24 @@ function tryParseLogs(logs: Log[], ifaces: Interface[]) {
     return out;
 }
 
+const cid_from_hash = (hash: BytesLike) => {
+    const _hash = Buffer.from("1220" + hash.toString().slice(2), "hex");
+    const cid = new cids(1, "dag-pb", _hash);
+    return cid;
+};
+
+const credentials = {
+    accessKeyId: process.env.AWS_ACCESS_KEYID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+};
+
 describe("Stakehound", function () {
     let signers: SignerWithAddress[];
     let multiplexer: Multiplexer;
     let context: DeployTestContext;
+    const s3 = new S3({
+        credentials,
+    });
     this.beforeAll(async function () {
         this.timeout(100000);
         signers = await ethers.getSigners();
@@ -61,10 +78,16 @@ describe("Stakehound", function () {
         ({ multiplexer } = context);
     });
     it("rewards type", async function () {
+        this.timeout(20000);
         const startBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
         await init_test(context);
+        await HRE.network.provider.request({
+            method: "evm_setNextBlockTimestamp",
+            params: [startBlock.timestamp + 60 * 60 * 24],
+        });
+        await signers[0].sendTransaction({ value: 0, to: signers[0].address });
         const endBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
@@ -73,43 +96,48 @@ describe("Stakehound", function () {
             context.geysers.sfiro.address,
             context.geysers.seth.address,
         ];
-        const r = await fetch_system_rewards(
-            ethers.provider,
+
+        const config = {
+            startBlock: startBlock.number,
+            multiplexer: multiplexer,
+            initDistribution: {
+                cycle: 0,
+                rewards: {},
+                rewardsDistributed: {},
+                rewardsDistributedInRange: {},
+                rewardsInRange: {},
+                users: {},
+            },
+            signer: signers[0],
             geysers,
-            startBlock.number,
-            endBlock.number,
-            startBlock.timestamp + 60 * 60 * 24,
-            1
-        );
-        expect(validate_rewards(r)).to.eq(true);
-        const w = await play_system_rewards(
-            r,
+            credentials,
+        };
+        await init_rewards(config, s3, ethers.provider, endBlock.number);
+        await approve_rewards(config, s3, ethers.provider);
+        const newr = await multiplexer.lastPublishedMerkleData();
+        const waitP = wait_for_next_proposed(
             ethers.provider,
-            geysers,
-            startBlock.number,
-            endBlock.number,
-            startBlock.timestamp + 60 * 60 * 24,
-            startBlock.timestamp + 60 * 60 * 24 * 2
+            multiplexer,
+            newr.cycle.toNumber(),
+            1000
         );
-        w.cycle = 1; // hack for tests
-        const m = new MultiMerkle(rewards_to_claims(w));
-        await multiplexer.proposeRoot(
-            m.getHexRoot(),
-            m.getHexRoot(),
-            w.cycle,
-            0,
-            endBlock.number * 2
+        await HRE.network.provider.request({
+            method: "evm_setNextBlockTimestamp",
+            params: [endBlock.timestamp + 60 * 60 * 24],
+        });
+        await signers[0].sendTransaction({ value: 0, to: signers[0].address });
+        const nextEndBlock = await ethers.provider.getBlock(
+            await ethers.provider.getBlockNumber()
         );
-        await multiplexer.approveRoot(
-            m.getHexRoot(),
-            m.getHexRoot(),
-            w.cycle,
-            0,
-            endBlock.number * 2
-        );
+        await bump_rewards(config, s3, ethers.provider, nextEndBlock.number);
+        await approve_rewards(config, s3, ethers.provider);
+        // console.log('got block!', await waitP)
+        const last = await multiplexer.lastPublishedMerkleData();
+        const rewards = await fetch_rewards(s3, last.root);
+        const m = MultiMerkle.fromMerkleRewards(last.cycle.toNumber(), rewards);
         const _s = signers[3];
-        const ci = m.claims.findIndex((c) => c.account === _s.address);
-        const c = m.claims[ci];
+        const caddress = _.keys(m.merkleRewards.claims).find((c) => c === _s.address)!;
+        const c = m.merkleRewards.claims[caddress]!;
         const balances = await Promise.all(
             c.tokens.map((x) =>
                 StakedToken__factory.connect(x, ethers.provider).balanceOf(_s.address)
@@ -117,7 +145,12 @@ describe("Stakehound", function () {
         );
         await multiplexer
             .connect(_s)
-            .claim(c!.tokens, c!.amounts, c!.cycle, m.getHexProof(c!));
+            .claim(
+                c.tokens,
+                c.amounts,
+                last.cycle,
+                m.getHexProof({ ...c, cycle: last.cycle.toNumber(), account: caddress })
+            );
         const newBalances = await Promise.all(
             c.tokens.map((x) =>
                 StakedToken__factory.connect(x, ethers.provider).balanceOf(_s.address)

@@ -1,11 +1,10 @@
 import { BigNumber } from "bignumber.js";
-import { Log, Filter, Provider } from "@ethersproject/providers";
+import { Log, Provider } from "@ethersproject/providers";
 import { GeyserAction } from "./calc_stakes";
-import { ethers, providers } from "ethers";
-import geyserAbi from "../../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
-import { StakehoundGeyser } from "../../typechain";
+import { ethers } from "ethers";
+import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
+import { StakehoundGeyser } from "../typechain";
 import { getAddress } from "ethers/lib/utils";
-import { ActionsMap } from "./calc_stakes";
 
 const giface = new ethers.utils.Interface(
     geyserAbi.abi

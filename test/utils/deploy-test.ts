@@ -1,16 +1,14 @@
 import HRE, { ethers } from "hardhat";
-import { Signer, BigNumber } from "ethers";
-import { Provider } from "@ethersproject/providers";
+import { BigNumber } from "ethers";
 import {
     Multiplexer__factory,
     StakehoundGeyser,
     StakehoundGeyser__factory,
     // IStakedToken__factory,
 } from "../../typechain";
-import { getAccounts } from "../utils";
-import { StakedToken__factory, StakedToken } from "./types";
+import { StakedToken__factory, StakedToken } from "../../src/types";
 import { Awaited } from "ts-essentials";
-import { GeyserAction } from "./calc_stakes";
+import { GeyserAction } from "../../src/calc_stakes";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 /*
 
@@ -56,7 +54,8 @@ const deploy_test = async () => {
     const gf = (await ethers.getContractFactory(
         "StakehoundGeyser"
     )) as StakehoundGeyser__factory;
-    const { accounts, signers } = await getAccounts();
+    const signers = await ethers.getSigners()
+    const accounts = signers.map(s => s.address)
     const geysers: { [addr in Tokens]: StakehoundGeyser } = <any>{};
     geysers.sfiro = await gf.deploy();
     geysers.seth = await gf.deploy();
@@ -194,7 +193,7 @@ const unstake_all = async (con: DeployTestContext) => {
 
 const init_test = async (con: DeployTestContext) => {
     const signers = await ethers.getSigners();
-    const deployer = signers.splice(0, 1);
+    const deployer = signers.splice(0, 1)[0]!;
     const block = await ethers.provider.getBlock(
         await ethers.provider.getBlockNumber()
     );
