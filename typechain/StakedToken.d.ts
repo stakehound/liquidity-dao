@@ -34,6 +34,7 @@ interface StakedTokenInterface extends ethers.utils.Interface {
     "downstreamCallerAddress()": FunctionFragment;
     "increaseAllowance(address,uint256)": FunctionFragment;
     "initialize(string,string,uint8,uint256,uint256)": FunctionFragment;
+    "isBlacklisted(address)": FunctionFragment;
     "mint(address,uint256)": FunctionFragment;
     "name()": FunctionFragment;
     "owner()": FunctionFragment;
@@ -41,6 +42,7 @@ interface StakedTokenInterface extends ethers.utils.Interface {
     "paused()": FunctionFragment;
     "removeTransaction(uint256)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
+    "setBlacklisted(address,bool)": FunctionFragment;
     "setDownstreamCaller(address)": FunctionFragment;
     "setName(string)": FunctionFragment;
     "setSupplyController(address)": FunctionFragment;
@@ -56,7 +58,6 @@ interface StakedTokenInterface extends ethers.utils.Interface {
     "transferFrom(address,address,uint256)": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
     "unpause()": FunctionFragment;
-    "v2()": FunctionFragment;
   };
 
   encodeFunctionData(
@@ -99,6 +100,10 @@ interface StakedTokenInterface extends ethers.utils.Interface {
     values: [string, string, BigNumberish, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "isBlacklisted",
+    values: [string]
+  ): string;
+  encodeFunctionData(
     functionFragment: "mint",
     values: [string, BigNumberish]
   ): string;
@@ -113,6 +118,10 @@ interface StakedTokenInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setBlacklisted",
+    values: [string, boolean]
   ): string;
   encodeFunctionData(
     functionFragment: "setDownstreamCaller",
@@ -159,7 +168,6 @@ interface StakedTokenInterface extends ethers.utils.Interface {
     values: [string]
   ): string;
   encodeFunctionData(functionFragment: "unpause", values?: undefined): string;
-  encodeFunctionData(functionFragment: "v2", values?: undefined): string;
 
   decodeFunctionResult(
     functionFragment: "addTransaction",
@@ -191,6 +199,10 @@ interface StakedTokenInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "isBlacklisted",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "mint", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
@@ -202,6 +214,10 @@ interface StakedTokenInterface extends ethers.utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setBlacklisted",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -246,25 +262,30 @@ interface StakedTokenInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "unpause", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "v2", data: BytesLike): Result;
 
   events: {
     "Approval(address,address,uint256)": EventFragment;
+    "Blacklisted(address,bool)": EventFragment;
     "LogSupplyControllerUpdated(address)": EventFragment;
     "LogTokenDistribution(uint256,uint256,bool,uint256)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "Paused(address)": EventFragment;
     "Transfer(address,address,uint256)": EventFragment;
     "Unpaused(address)": EventFragment;
+    "WarningMaxExpectedSupplyExceeded(uint256,uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Approval"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "Blacklisted"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "LogSupplyControllerUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "LogTokenDistribution"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Paused"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Transfer"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Unpaused"): EventFragment;
+  getEvent(
+    nameOrSignatureOrTopic: "WarningMaxExpectedSupplyExceeded"
+  ): EventFragment;
 }
 
 export class StakedToken extends Contract {
@@ -386,7 +407,7 @@ export class StakedToken extends Contract {
       name_: string,
       symbol_: string,
       decimals_: BigNumberish,
-      maxSupply_: BigNumberish,
+      maxExpectedSupply_: BigNumberish,
       initialSupply_: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
@@ -395,10 +416,17 @@ export class StakedToken extends Contract {
       name_: string,
       symbol_: string,
       decimals_: BigNumberish,
-      maxSupply_: BigNumberish,
+      maxExpectedSupply_: BigNumberish,
       initialSupply_: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
+
+    isBlacklisted(arg0: string, overrides?: CallOverrides): Promise<[boolean]>;
+
+    "isBlacklisted(address)"(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
     mint(
       account: string,
@@ -441,6 +469,18 @@ export class StakedToken extends Contract {
     renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>;
 
     "renounceOwnership()"(overrides?: Overrides): Promise<ContractTransaction>;
+
+    setBlacklisted(
+      account: string,
+      _isBlacklisted: boolean,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "setBlacklisted(address,bool)"(
+      account: string,
+      _isBlacklisted: boolean,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
 
     setDownstreamCaller(
       _downstreamCaller: string,
@@ -557,10 +597,6 @@ export class StakedToken extends Contract {
     unpause(overrides?: Overrides): Promise<ContractTransaction>;
 
     "unpause()"(overrides?: Overrides): Promise<ContractTransaction>;
-
-    v2(overrides?: CallOverrides): Promise<[string]>;
-
-    "v2()"(overrides?: CallOverrides): Promise<[string]>;
   };
 
   addTransaction(
@@ -668,7 +704,7 @@ export class StakedToken extends Contract {
     name_: string,
     symbol_: string,
     decimals_: BigNumberish,
-    maxSupply_: BigNumberish,
+    maxExpectedSupply_: BigNumberish,
     initialSupply_: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
@@ -677,10 +713,17 @@ export class StakedToken extends Contract {
     name_: string,
     symbol_: string,
     decimals_: BigNumberish,
-    maxSupply_: BigNumberish,
+    maxExpectedSupply_: BigNumberish,
     initialSupply_: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
+
+  isBlacklisted(arg0: string, overrides?: CallOverrides): Promise<boolean>;
+
+  "isBlacklisted(address)"(
+    arg0: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
 
   mint(
     account: string,
@@ -723,6 +766,18 @@ export class StakedToken extends Contract {
   renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>;
 
   "renounceOwnership()"(overrides?: Overrides): Promise<ContractTransaction>;
+
+  setBlacklisted(
+    account: string,
+    _isBlacklisted: boolean,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "setBlacklisted(address,bool)"(
+    account: string,
+    _isBlacklisted: boolean,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
 
   setDownstreamCaller(
     _downstreamCaller: string,
@@ -840,22 +895,18 @@ export class StakedToken extends Contract {
 
   "unpause()"(overrides?: Overrides): Promise<ContractTransaction>;
 
-  v2(overrides?: CallOverrides): Promise<string>;
-
-  "v2()"(overrides?: CallOverrides): Promise<string>;
-
   callStatic: {
     addTransaction(
       destination: string,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<BigNumber>;
 
     "addTransaction(address,bytes)"(
       destination: string,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>;
+    ): Promise<BigNumber>;
 
     allowance(
       owner_: string,
@@ -947,7 +998,7 @@ export class StakedToken extends Contract {
       name_: string,
       symbol_: string,
       decimals_: BigNumberish,
-      maxSupply_: BigNumberish,
+      maxExpectedSupply_: BigNumberish,
       initialSupply_: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
@@ -956,10 +1007,17 @@ export class StakedToken extends Contract {
       name_: string,
       symbol_: string,
       decimals_: BigNumberish,
-      maxSupply_: BigNumberish,
+      maxExpectedSupply_: BigNumberish,
       initialSupply_: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    isBlacklisted(arg0: string, overrides?: CallOverrides): Promise<boolean>;
+
+    "isBlacklisted(address)"(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
 
     mint(
       account: string,
@@ -1002,6 +1060,18 @@ export class StakedToken extends Contract {
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
     "renounceOwnership()"(overrides?: CallOverrides): Promise<void>;
+
+    setBlacklisted(
+      account: string,
+      _isBlacklisted: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "setBlacklisted(address,bool)"(
+      account: string,
+      _isBlacklisted: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     setDownstreamCaller(
       _downstreamCaller: string,
@@ -1112,10 +1182,6 @@ export class StakedToken extends Contract {
     unpause(overrides?: CallOverrides): Promise<void>;
 
     "unpause()"(overrides?: CallOverrides): Promise<void>;
-
-    v2(overrides?: CallOverrides): Promise<string>;
-
-    "v2()"(overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {
@@ -1124,6 +1190,8 @@ export class StakedToken extends Contract {
       spender: string | null,
       value: null
     ): EventFilter;
+
+    Blacklisted(account: string | null, isBlacklisted: null): EventFilter;
 
     LogSupplyControllerUpdated(supplyController: null): EventFilter;
 
@@ -1144,6 +1212,11 @@ export class StakedToken extends Contract {
     Transfer(from: string | null, to: string | null, value: null): EventFilter;
 
     Unpaused(account: null): EventFilter;
+
+    WarningMaxExpectedSupplyExceeded(
+      totalSupply: null,
+      totalShares: null
+    ): EventFilter;
   };
 
   estimateGas: {
@@ -1249,7 +1322,7 @@ export class StakedToken extends Contract {
       name_: string,
       symbol_: string,
       decimals_: BigNumberish,
-      maxSupply_: BigNumberish,
+      maxExpectedSupply_: BigNumberish,
       initialSupply_: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
@@ -1258,9 +1331,16 @@ export class StakedToken extends Contract {
       name_: string,
       symbol_: string,
       decimals_: BigNumberish,
-      maxSupply_: BigNumberish,
+      maxExpectedSupply_: BigNumberish,
       initialSupply_: BigNumberish,
       overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    isBlacklisted(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    "isBlacklisted(address)"(
+      arg0: string,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     mint(
@@ -1304,6 +1384,18 @@ export class StakedToken extends Contract {
     renounceOwnership(overrides?: Overrides): Promise<BigNumber>;
 
     "renounceOwnership()"(overrides?: Overrides): Promise<BigNumber>;
+
+    setBlacklisted(
+      account: string,
+      _isBlacklisted: boolean,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "setBlacklisted(address,bool)"(
+      account: string,
+      _isBlacklisted: boolean,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
 
     setDownstreamCaller(
       _downstreamCaller: string,
@@ -1414,10 +1506,6 @@ export class StakedToken extends Contract {
     unpause(overrides?: Overrides): Promise<BigNumber>;
 
     "unpause()"(overrides?: Overrides): Promise<BigNumber>;
-
-    v2(overrides?: CallOverrides): Promise<BigNumber>;
-
-    "v2()"(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -1535,7 +1623,7 @@ export class StakedToken extends Contract {
       name_: string,
       symbol_: string,
       decimals_: BigNumberish,
-      maxSupply_: BigNumberish,
+      maxExpectedSupply_: BigNumberish,
       initialSupply_: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
@@ -1544,9 +1632,19 @@ export class StakedToken extends Contract {
       name_: string,
       symbol_: string,
       decimals_: BigNumberish,
-      maxSupply_: BigNumberish,
+      maxExpectedSupply_: BigNumberish,
       initialSupply_: BigNumberish,
       overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    isBlacklisted(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    "isBlacklisted(address)"(
+      arg0: string,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     mint(
@@ -1590,6 +1688,18 @@ export class StakedToken extends Contract {
     renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>;
 
     "renounceOwnership()"(overrides?: Overrides): Promise<PopulatedTransaction>;
+
+    setBlacklisted(
+      account: string,
+      _isBlacklisted: boolean,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "setBlacklisted(address,bool)"(
+      account: string,
+      _isBlacklisted: boolean,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
 
     setDownstreamCaller(
       _downstreamCaller: string,
@@ -1716,9 +1826,5 @@ export class StakedToken extends Contract {
     unpause(overrides?: Overrides): Promise<PopulatedTransaction>;
 
     "unpause()"(overrides?: Overrides): Promise<PopulatedTransaction>;
-
-    v2(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    "v2()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }

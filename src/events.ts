@@ -48,7 +48,13 @@ const fetchEvents = async (
 
 const collectActions = (logs: Log[]) => {
     const acts: GeyserAction[] = [];
-    for (const log of logs) {
+    for (const log of logs.sort((x, y) =>
+        x.blockNumber < y.blockNumber
+            ? -1
+            : x.blockNumber > y.blockNumber
+            ? 1
+            : x.logIndex - y.logIndex
+    )) {
         try {
             const parsed = giface.parseLog(log);
             const type =
@@ -95,6 +101,15 @@ const collectActions = (logs: Log[]) => {
             });
         } catch (e) {
             console.error(`parseEvents: failed to parse event ${log} error:${e}`);
+        }
+    }
+    for (let i = 0; i < acts.length; i++) {
+        for (let j = i + 1; j < acts.length; j++) {
+            if (acts[j].timestamp === acts[i].timestamp) {
+                acts[j].timestamp++;
+            } else {
+                break;
+            }
         }
     }
     return acts;

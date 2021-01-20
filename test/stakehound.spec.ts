@@ -3,12 +3,17 @@ import HRE, { ethers } from "hardhat";
 import { solidity } from "ethereum-waffle";
 import { Signer, BigNumber } from "ethers";
 import _ from "lodash";
-import { StakehoundGeyser, Multiplexer, MerkleMock__factory } from "../typechain";
+import {
+    StakehoundGeyser,
+    Multiplexer,
+    MerkleMock__factory,
+    StakedToken__factory,
+    StakedToken,
+} from "../typechain";
 import { deploy_test, init_test, DeployTestContext } from "./utils/deploy-test";
 import { JsonRpcSigner, Log } from "@ethersproject/providers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
 import stakedTokenAbi from "../src/abi/StakedToken.json";
-import { StakedToken, StakedToken__factory } from "../src/types";
 import { Interface, LogDescription, BytesLike } from "ethers/lib/utils";
 import { fetchEvents, collectActions } from "../src/events";
 import { keccak256 } from "ethereumjs-util";
@@ -33,7 +38,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import S3 from "aws-sdk/clients/s3";
 import cids from "cids";
 import { upload_rewards, fetch_rewards } from "../src/s3";
-import { approve_rewards, init_rewards, bump_rewards } from "../src/system";
+import { approve_rewards, init_rewards, bump_rewards, Context } from "../src/system";
 const giface = new ethers.utils.Interface(
     geyserAbi.abi
 ) as StakehoundGeyser["interface"];
@@ -81,6 +86,11 @@ describe("Stakehound", function () {
         signers = await ethers.getSigners();
         context = await deploy_test();
         ({ multiplexer } = context);
+        await Promise.all([
+            _.map(context.tokens, async (c, a) => {
+                console.log(a, await c.decimals());
+            }),
+        ]);
     });
     it("rewards type", async function () {
         this.timeout(100000);
@@ -102,7 +112,7 @@ describe("Stakehound", function () {
             context.geysers.seth.address,
         ];
 
-        const config = {
+        const proposeContext: Context = {
             startBlock: startBlock.number,
             multiplexer: multiplexer,
             initDistribution: {
@@ -116,9 +126,12 @@ describe("Stakehound", function () {
             signer: signers[0],
             geysers,
             credentials,
+            s3,
+            provider: ethers.provider,
+            rate: 1000,
         };
-        await init_rewards(config, s3, ethers.provider, endBlock.number);
-        await approve_rewards(config, s3, ethers.provider);
+        await init_rewards(proposeContext, endBlock.number);
+        await approve_rewards(proposeContext);
         const newr = await multiplexer.lastPublishedMerkleData();
         const waitP = wait_for_next_proposed(
             ethers.provider,
@@ -134,8 +147,8 @@ describe("Stakehound", function () {
         const nextEndBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
-        await bump_rewards(config, s3, ethers.provider, nextEndBlock.number);
-        await approve_rewards(config, s3, ethers.provider);
+        await bump_rewards(proposeContext, nextEndBlock.number);
+        await approve_rewards(proposeContext);
         expect((await waitP).cycle.toNumber()).to.eq(newr.cycle.toNumber() + 1);
         const last = await multiplexer.lastPublishedMerkleData();
         const rewards = await fetch_rewards(s3, last.root);
@@ -166,7 +179,7 @@ describe("Stakehound", function () {
         );
         expect(_.isEqual(newBalances, expected)).to.eq(true);
     });
-    it("test wait_for_block", async function () {
+    it("test wait_for_time", async function () {
         this.timeout(100000);
         const block = await ethers.provider.getBlock("latest");
         const wtime = block.timestamp + 60 * 60 * 24;

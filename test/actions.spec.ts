@@ -3,7 +3,12 @@ import HRE, { ethers } from "hardhat";
 import { solidity } from "ethereum-waffle";
 import { Signer, BigNumber } from "ethers";
 import _ from "lodash";
-import { StakehoundGeyser, Multiplexer } from "../typechain";
+import {
+    StakehoundGeyser,
+    Multiplexer,
+    StakedToken__factory,
+    StakedToken,
+} from "../typechain";
 import {
     deploy_test,
     init_test,
@@ -13,7 +18,6 @@ import {
 import { Log } from "@ethersproject/providers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
 import stakedTokenAbi from "../src/abi/StakedToken.json";
-import { StakedToken, } from "../src/types";
 import { Interface, LogDescription } from "ethers/lib/utils";
 import {
     fetch_system_rewards,

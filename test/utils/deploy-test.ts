@@ -4,12 +4,14 @@ import {
     Multiplexer__factory,
     StakehoundGeyser,
     StakehoundGeyser__factory,
+    StakedToken__factory,
+    StakedToken,
     // IStakedToken__factory,
 } from "../../typechain";
-import { StakedToken__factory, StakedToken } from "../../src/types";
 import { Awaited } from "ts-essentials";
 import { GeyserAction } from "../../src/calc_stakes";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import _ from "lodash";
 /*
 
 
@@ -54,8 +56,8 @@ const deploy_test = async () => {
     const gf = (await ethers.getContractFactory(
         "StakehoundGeyser"
     )) as StakehoundGeyser__factory;
-    const signers = await ethers.getSigners()
-    const accounts = signers.map(s => s.address)
+    const signers = await ethers.getSigners();
+    const accounts = signers.map((s) => s.address);
     const geysers: { [addr in Tokens]: StakehoundGeyser } = <any>{};
     geysers.sfiro = await gf.deploy();
     geysers.seth = await gf.deploy();
@@ -201,9 +203,16 @@ const init_test = async (con: DeployTestContext) => {
     await init_geyser(con.geysers.sfiro, con, block.timestamp);
     await init_geyser(con.geysers.seth, con, block.timestamp);
     await init_geyser(con.geysers.sxem, con, block.timestamp);
+    const supplies: [string, BigNumber][] = await Promise.all(
+        _.map(
+            con.tokens,
+            async (x, k): Promise<[string, BigNumber]> => [k, await x.totalShares()]
+        )
+    );
     await mintAndStake(signers, con.geysers.seth, con.tokens.seth);
     await mintAndStake(signers, con.geysers.sfiro, con.tokens.sfiro);
     await mintAndStake(signers, con.geysers.sxem, con.tokens.sxem);
+    const aftersupplies = await Promise.all(_.map(con.tokens, (x) => x.totalShares()));
 };
 
 export { deploy_test, init_test, DeployTestContext, unstake_all };
