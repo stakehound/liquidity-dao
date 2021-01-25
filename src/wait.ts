@@ -1,6 +1,7 @@
 import _ from "lodash";
 import { Provider } from "@ethersproject/providers";
 import { Multiplexer } from "../typechain/Multiplexer";
+import { assert } from "ts-essentials";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -14,14 +15,14 @@ const wait_for_block = async (
         await sleep(rate);
         n = await provider.getBlockNumber();
     }
-    return provider.getBlock(0);
+    return provider.getBlock(n);
 };
 
 const wait_for_time = async (provider: Provider, time: number, rate: number) => {
-    let b = await provider.getBlock(await provider.getBlockNumber() - 30);
+    let b = await provider.getBlock((await provider.getBlockNumber()) - 30);
     while (b.timestamp < time) {
         await sleep(rate);
-        b = await provider.getBlock(await provider.getBlockNumber() - 30);
+        b = await provider.getBlock((await provider.getBlockNumber()) - 30);
     }
     return b;
 };
@@ -29,17 +30,10 @@ const wait_for_time = async (provider: Provider, time: number, rate: number) => 
 const wait_for_next_proposed = async (
     provider: Provider,
     multiplexer: Multiplexer,
-    cycle: number,
+    lastCycle: number,
     rate: number
 ) => {
     const block = await provider.getBlock("latest");
-    const last = await multiplexer.lastPublishedMerkleData();
-    if (last.cycle.toNumber() === cycle) {
-        return last;
-    }
-    if (last.cycle.toNumber() > cycle) {
-        throw new Error("wait_for_next_proposed: expected cycle already passed");
-    }
     const filter = {
         address: multiplexer.address,
         fromBlock: block.number - 60,
@@ -62,13 +56,13 @@ const wait_for_next_proposed = async (
             try {
                 const parsed = multiplexer.interface.parseLog(log);
                 if (parsed.name === "RootProposed") {
-                    if (parsed.args.cycle.toNumber() >= cycle) {
+                    if (parsed.args.cycle.toNumber() > lastCycle) {
                         proposedBlocks.push(log.blockNumber);
                         done = true;
                     }
                 } else {
                     console.error(
-                        `wait_for_next_proposed: unexpected event ${log} ${parsed}`
+                        `wait_for_next_proposed: unexpected event ${JSON.stringify(log)} ${JSON.stringify(parsed)}`
                     );
                 }
             } catch (e) {
@@ -77,10 +71,23 @@ const wait_for_next_proposed = async (
                 );
             }
         }
-        filter.fromBlock = bn
+        filter.fromBlock = bn;
     }
     const proposeBlock = _.last(proposedBlocks)!;
-    return multiplexer.lastProposedMerkleData({ blockTag: proposeBlock });
+    const lastConfirmed = await multiplexer.lastProposedMerkleData({
+        blockTag: proposeBlock,
+    });
+    const last = await multiplexer.lastProposedMerkleData();
+    assert(
+        _.isEqual(last, lastConfirmed),
+        "wait_for_next_proposed: multiple proposed in short period - are two proposers running?"
+    );
+    const lastPublished = await multiplexer.lastPublishedMerkleData();
+    assert(
+        !_.isEqual(last, lastPublished),
+        "wait_for_next_proposed: last published and last confirmed are the same - is approver running too aggressively, or are there two approvers?"
+    );
+    return last;
 };
 
 export { wait_for_block, wait_for_next_proposed, wait_for_time, sleep };

@@ -86,35 +86,27 @@ describe("Stakehound", function () {
         signers = await ethers.getSigners();
         context = await deploy_test();
         ({ multiplexer } = context);
-        await Promise.all([
-            _.map(context.tokens, async (c, a) => {
-                console.log(a, await c.decimals());
-            }),
-        ]);
     });
     it("rewards type", async function () {
         this.timeout(100000);
-        const startBlock = await ethers.provider.getBlock(
-            await ethers.provider.getBlockNumber()
-        );
-        await init_test(context);
+        const startBlock = await init_test(context);
         await HRE.network.provider.request({
             method: "evm_setNextBlockTimestamp",
             params: [startBlock.timestamp + 60 * 60 * 24],
         });
-        await signers[0].sendTransaction({ value: 0, to: signers[0].address });
-        const endBlock = await ethers.provider.getBlock(
-            await ethers.provider.getBlockNumber()
-        );
+        for (let i = 0; i < 40; i++) {
+            await HRE.network.provider.request({
+                method: "evm_mine",
+            });
+        }
         const geysers = [
             context.geysers.seth.address,
             context.geysers.sfiro.address,
-            context.geysers.seth.address,
+            context.geysers.sxem.address,
         ];
-
         const proposeContext: Context = {
             startBlock: startBlock.number,
-            multiplexer: multiplexer,
+            multiplexer,
             initDistribution: {
                 cycle: 0,
                 rewards: {},
@@ -127,29 +119,40 @@ describe("Stakehound", function () {
             geysers,
             credentials,
             s3,
+            epoch: 10,
             provider: ethers.provider,
             rate: 1000,
         };
-        await init_rewards(proposeContext, endBlock.number);
+        await init_rewards(proposeContext);
         await approve_rewards(proposeContext);
-        const newr = await multiplexer.lastPublishedMerkleData();
-        const waitP = wait_for_next_proposed(
-            ethers.provider,
-            multiplexer,
-            newr.cycle.toNumber() + 1,
-            1000
+        const lastpub = await multiplexer.lastPublishedMerkleData();
+        for (let i = 0; i < 40; i++) {
+            await HRE.network.provider.request({
+                method: "evm_mine",
+            });
+        }
+        const waitP = wait_for_next_proposed(ethers.provider, multiplexer, lastpub.cycle.toNumber(), 1000);
+        const nextEndBlock = await ethers.provider.getBlock(
+            await ethers.provider.getBlockNumber()
+        );
+        const lastpubStart = await ethers.provider.getBlock(
+            lastpub.startBlock.toNumber()
+        );
+        const lastpubEnd = await ethers.provider.getBlock(lastpub.endBlock.toNumber());
+        await bump_rewards(
+            proposeContext,
+            lastpub,
+            lastpubStart,
+            lastpubEnd,
+            nextEndBlock
         );
         for (let i = 0; i < 40; i++) {
             await HRE.network.provider.request({
                 method: "evm_mine",
             });
         }
-        const nextEndBlock = await ethers.provider.getBlock(
-            await ethers.provider.getBlockNumber()
-        );
-        await bump_rewards(proposeContext, nextEndBlock.number);
+        expect((await waitP).cycle.toNumber()).to.eq(lastpub.cycle.toNumber() + 1);
         await approve_rewards(proposeContext);
-        expect((await waitP).cycle.toNumber()).to.eq(newr.cycle.toNumber() + 1);
         const last = await multiplexer.lastPublishedMerkleData();
         const rewards = await fetch_rewards(s3, last.root);
         const m = MultiMerkle.fromMerkleRewards(last.cycle.toNumber(), rewards);

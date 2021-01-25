@@ -1,7 +1,7 @@
 import * as z from "zod";
 import yargs from "yargs";
 import { readFileSync } from "fs";
-import { Context, run_propose, run_init, approve_rewards } from "./system";
+import { Context, run_propose, approve_rewards, init_rewards } from "./system";
 import S3 from "aws-sdk/clients/s3";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { Wallet, providers } from "ethers";
@@ -29,6 +29,7 @@ const confSchema = z.object({
     }),
     initDistributionPath: z.string(),
     rate: z.number(),
+    epoch: z.number(),
     multiplexer: z.string().refine((x) => x === getAddress(x)),
     startBlock: z.number(),
     geysers: z.array(z.string().refine((x) => x === getAddress(x))),
@@ -47,6 +48,7 @@ const fetchContext = (configPath: string): Context => {
     const signer = new Wallet(conf.activeKey).connect(provider);
     const multiplexer = Multiplexer__factory.connect(conf.multiplexer, signer);
     return {
+        epoch: conf.epoch,
         geysers: conf.geysers.sort(),
         startBlock: conf.startBlock,
         initDistribution,
@@ -89,7 +91,7 @@ const run_with_context = (func: (context: Context) => Promise<void>) => {
 if (argv._[0] === "propose") {
     run_with_context(run_propose);
 } else if (argv._[0] === "init") {
-    run_with_context(run_init);
+    run_with_context(init_rewards);
 } else if (argv._[0] === "approve") {
     run_with_context(approve_rewards);
 }

@@ -449,6 +449,21 @@ const compare_token_rewards = (r: TokenReward[]) => {
 };
 
 const validate_rewards = (r: Rewards) => {
+    // console.log(
+    //     "vlida\n",
+    //     _.zip(_.values(r.rewards), _.values(r.rewardsDistributed)).map(([x, y]) => [
+    //         x!.toFixed(0),
+    //         y!.toFixed(0),
+    //     ]),
+    //     '\nvlidrange\n',
+    //     _.zip(
+    //         _.values(r.rewardsInRange),
+    //         _.values(r.rewardsDistributedInRange)
+    //     ).map(([x, y]) => [x!.toFixed(0), y!.toFixed(0)]),
+    //     validate_distributed(r),
+    //     compare_token_rewards([r.rewardsDistributed, r.rewards]),
+    //     compare_token_rewards([r.rewardsDistributedInRange, r.rewardsInRange])
+    // );
     return (
         validate_distributed(r) &&
         compare_token_rewards([r.rewardsDistributed, r.rewards]) &&
@@ -581,6 +596,7 @@ const create_calc_system_stakes = (geysers: { [addr: string]: StakehoundConfig }
             cgs,
             (acc: SystemState, calc, key) => {
                 acc[key] = calc(acts[key], absTime, relTime, endTime);
+                validate_rewards(get_rewards(acc[key], 0))
             },
             <SystemState>{}
         );

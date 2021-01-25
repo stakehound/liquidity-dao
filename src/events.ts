@@ -23,10 +23,10 @@ const fetchEvents = async (
     };
     const logs: Log[] = [];
     try {
-        while (filter.fromBlock! < toBlock) {
+        while (filter.fromBlock! <= toBlock) {
             logs.push(...(await provider.getLogs(filter)));
             filter.fromBlock = filter.fromBlock + 10000;
-            const nextTo = filter.toBlock + 9999;
+            const nextTo = filter.fromBlock + 9999;
             filter.toBlock = toBlock < nextTo ? toBlock : nextTo;
         }
         return logs.sort((x, y) =>

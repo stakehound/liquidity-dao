@@ -379,13 +379,12 @@ export class Multiplexer extends Contract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+        [string, string, BigNumber, BigNumber, BigNumber] & {
           root: string;
           contentHash: string;
           cycle: BigNumber;
           startBlock: BigNumber;
           endBlock: BigNumber;
-          uploadBlock: BigNumber;
         }
       ]
     >;
@@ -394,13 +393,12 @@ export class Multiplexer extends Contract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+        [string, string, BigNumber, BigNumber, BigNumber] & {
           root: string;
           contentHash: string;
           cycle: BigNumber;
           startBlock: BigNumber;
           endBlock: BigNumber;
-          uploadBlock: BigNumber;
         }
       ]
     >;
@@ -409,13 +407,12 @@ export class Multiplexer extends Contract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+        [string, string, BigNumber, BigNumber, BigNumber] & {
           root: string;
           contentHash: string;
           cycle: BigNumber;
           startBlock: BigNumber;
           endBlock: BigNumber;
-          uploadBlock: BigNumber;
         }
       ]
     >;
@@ -424,13 +421,12 @@ export class Multiplexer extends Contract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+        [string, string, BigNumber, BigNumber, BigNumber] & {
           root: string;
           contentHash: string;
           cycle: BigNumber;
           startBlock: BigNumber;
           endBlock: BigNumber;
-          uploadBlock: BigNumber;
         }
       ]
     >;
@@ -509,52 +505,48 @@ export class Multiplexer extends Contract {
     lastProposedMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
     "lastProposedMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
     lastPublishedMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
     "lastPublishedMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
@@ -717,52 +709,48 @@ export class Multiplexer extends Contract {
   getCurrentMerkleData(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
       startBlock: BigNumber;
       endBlock: BigNumber;
-      uploadBlock: BigNumber;
     }
   >;
 
   "getCurrentMerkleData()"(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
       startBlock: BigNumber;
       endBlock: BigNumber;
-      uploadBlock: BigNumber;
     }
   >;
 
   getPendingMerkleData(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
       startBlock: BigNumber;
       endBlock: BigNumber;
-      uploadBlock: BigNumber;
     }
   >;
 
   "getPendingMerkleData()"(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
       startBlock: BigNumber;
       endBlock: BigNumber;
-      uploadBlock: BigNumber;
     }
   >;
 
@@ -840,52 +828,48 @@ export class Multiplexer extends Contract {
   lastProposedMerkleData(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
       startBlock: BigNumber;
       endBlock: BigNumber;
-      uploadBlock: BigNumber;
     }
   >;
 
   "lastProposedMerkleData()"(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
       startBlock: BigNumber;
       endBlock: BigNumber;
-      uploadBlock: BigNumber;
     }
   >;
 
   lastPublishedMerkleData(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
       startBlock: BigNumber;
       endBlock: BigNumber;
-      uploadBlock: BigNumber;
     }
   >;
 
   "lastPublishedMerkleData()"(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
       startBlock: BigNumber;
       endBlock: BigNumber;
-      uploadBlock: BigNumber;
     }
   >;
 
@@ -1048,52 +1032,48 @@ export class Multiplexer extends Contract {
     getCurrentMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
     "getCurrentMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
     getPendingMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
     "getPendingMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
@@ -1171,52 +1151,48 @@ export class Multiplexer extends Contract {
     lastProposedMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
     "lastProposedMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
     lastPublishedMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 
     "lastPublishedMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
         startBlock: BigNumber;
         endBlock: BigNumber;
-        uploadBlock: BigNumber;
       }
     >;
 

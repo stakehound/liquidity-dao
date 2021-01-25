@@ -213,6 +213,7 @@ const init_test = async (con: DeployTestContext) => {
     await mintAndStake(signers, con.geysers.sfiro, con.tokens.sfiro);
     await mintAndStake(signers, con.geysers.sxem, con.tokens.sxem);
     const aftersupplies = await Promise.all(_.map(con.tokens, (x) => x.totalShares()));
+    return block
 };
 
 export { deploy_test, init_test, DeployTestContext, unstake_all };

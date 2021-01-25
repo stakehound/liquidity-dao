@@ -23,7 +23,6 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
         uint256 cycle;
         uint256 startBlock;
         uint256 endBlock;
-        uint256 uploadBlock;
     }
 
     bytes32 public constant ROOT_PROPOSER_ROLE = keccak256("ROOT_PROPOSER_ROLE");
@@ -150,7 +149,7 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
         _onlyRootProposer();
         require(cycle == lastPublishedMerkleData.cycle.add(1), "Incorrect cycle");
         // require(block.number > endBlock && endBlock > lastProposedMerkleData.endBlock);
-        lastProposedMerkleData = MerkleData(root, contentHash, cycle, startBlock, endBlock, block.number);
+        lastProposedMerkleData = MerkleData(root, contentHash, cycle, startBlock, endBlock);
 
         emit RootProposed(cycle, root, contentHash, now, block.number);
     }
@@ -173,7 +172,7 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
         require(startBlock == lastProposedMerkleData.startBlock, "Incorrect cycle start block");
         require(endBlock == lastProposedMerkleData.endBlock, "Incorrect cycle end block");
 
-        lastPublishedMerkleData = MerkleData(root, contentHash, cycle, startBlock, endBlock, block.number);
+        lastPublishedMerkleData = MerkleData(root, contentHash, cycle, startBlock, endBlock);
 
         emit RootValidated(cycle, root, contentHash, now, block.number);
     }

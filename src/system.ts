@@ -1,6 +1,7 @@
 import _ from "lodash";
+import { Awaited } from "ts-essentials";
 import { Multiplexer } from "../typechain";
-import { Provider } from "@ethersproject/providers";
+import { Provider, Block } from "@ethersproject/providers";
 import { Signer } from "ethers";
 import {
     fetch_system_rewards,
@@ -14,12 +15,8 @@ import S3 from "aws-sdk/clients/s3";
 import { upload_rewards, fetch_rewards } from "./s3";
 import MultiMerkle, { compare_merkle_rewards } from "./MultiMerkle";
 import { assert } from "ts-essentials";
-import { wait_for_block } from "./wait";
-
-const credentials = {
-    accessKeyId: process.env.AWS_ACCESS_KEYID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-};
+import { wait_for_block, wait_for_time, wait_for_next_proposed } from "./wait";
+import { log_merkle_pair } from "../test/utils/test";
 
 interface Context {
     geysers: string[];
@@ -34,20 +31,29 @@ interface Context {
         secretAccessKey: string;
     };
     signer: Signer;
+    epoch: number;
 }
 
 //  Proposer
 
-const init_rewards = async (context: Context, endBlock: number) => {
+const init_rewards = async (context: Context) => {
     const { s3, provider } = context;
-    const start = await provider.getBlock(endBlock);
-    const end = await provider.getBlock(endBlock);
+    const end = await provider.getBlock((await provider.getBlockNumber()) - 30);
+    const startBlock = await provider.getBlock(context.startBlock);
+    const endTime =
+        startBlock.timestamp +
+        Math.floor((end.timestamp - startBlock.timestamp) / context.epoch) *
+            context.epoch;
+    assert(
+        end.number > startBlock.number && endTime > 0,
+        "init_rewards: starting too early"
+    );
     const r = await fetch_system_rewards(
         provider,
         context.geysers,
         context.startBlock,
         end.number,
-        end.timestamp,
+        endTime,
         1
     );
     const rewards = sum_rewards([r, parse_rewards_fixed(context.initDistribution)]);
@@ -72,27 +78,36 @@ const init_rewards = async (context: Context, endBlock: number) => {
     );
 };
 
-const bump_rewards = async (context: Context, endBlock: number) => {
+const bump_rewards = async (
+    context: Context,
+    last: Awaited<ReturnType<Context["multiplexer"]["lastPublishedMerkleData"]>>,
+    lastStart: Block,
+    lastEnd: Block,
+    nextEnd: Block
+) => {
     const { s3, provider } = context;
-    const last = await context.multiplexer.lastPublishedMerkleData();
-    const lastStart = await provider.getBlock(last.startBlock.toNumber());
-    const lastEnd = await provider.getBlock(last.endBlock.toNumber());
     assert(
         lastStart.number === context.startBlock,
         "bump_rewards: last published start block does not match contextured start block"
     );
+    const startBlock = await provider.getBlock(context.startBlock);
+    const lastEndTime =
+        startBlock.timestamp +
+        Math.floor((lastEnd.timestamp - startBlock.timestamp) / context.epoch) *
+            context.epoch;
     const r = await fetch_system_rewards(
         provider,
         context.geysers,
         context.startBlock,
         lastEnd.number,
-        lastEnd.timestamp,
+        lastEndTime,
         last.cycle.toNumber()
     );
     const calcLastRewards = sum_rewards([
         r,
         parse_rewards_fixed(context.initDistribution),
     ]);
+    const fetchedLastRewards = await fetch_rewards(s3, last.root);
 
     assert(
         validate_rewards(calcLastRewards),
@@ -103,21 +118,24 @@ const bump_rewards = async (context: Context, endBlock: number) => {
         calcMerkle.root === last.root,
         "bump_rewards last reward root and calculated reward root failed to match"
     );
-    const fetchedLastRewards = await fetch_rewards(s3, last.root);
     assert(
         compare_merkle_rewards(calcMerkle.merkleRewards, fetchedLastRewards),
         "bump_rewards: fetched last rewards and calculated last rewards failed to match"
     );
 
-    const nextEnd = await provider.getBlock(endBlock);
+    const nextEndTime =
+        startBlock.timestamp +
+        Math.floor((nextEnd.timestamp - startBlock.timestamp) / context.epoch) *
+            context.epoch;
+
     const newRewards = await play_system_rewards(
         r,
         provider,
         context.geysers,
         context.startBlock,
         nextEnd.number,
-        lastEnd.timestamp,
-        nextEnd.timestamp
+        lastEndTime,
+        nextEndTime
     );
 
     const newWithInit = sum_rewards([
@@ -143,6 +161,7 @@ const bump_rewards = async (context: Context, endBlock: number) => {
     console.log(
         `Proposed merkle root ${merkle.merkleRewards.merkleRoot} with tx ${txr.transactionHash}`
     );
+    return context.multiplexer.lastProposedMerkleData();
 };
 
 // Approver
@@ -157,6 +176,11 @@ const approve_rewards = async (context: Context) => {
     );
     const proposedStart = await provider.getBlock(proposed.startBlock.toNumber());
     const proposedEnd = await provider.getBlock(proposed.endBlock.toNumber());
+    const startBlock = await provider.getBlock(context.startBlock);
+    const endTime =
+        startBlock.timestamp +
+        Math.floor((proposedEnd.timestamp - startBlock.timestamp) / context.epoch) *
+            context.epoch;
     assert(
         proposedStart.number === context.startBlock,
         "approve_rewards: proposed published start block does not match contextured start block"
@@ -166,7 +190,7 @@ const approve_rewards = async (context: Context) => {
         context.geysers,
         context.startBlock,
         proposedEnd.number,
-        proposedEnd.timestamp,
+        endTime,
         proposed.cycle.toNumber()
     );
     const calcedRewards = sum_rewards([
@@ -200,30 +224,46 @@ const approve_rewards = async (context: Context) => {
     console.log(`Approving merkle root ${merkle.root} ${txr.transactionHash}`);
 };
 
-const run_init = async (context: Context) => {
-    const { provider } = context;
-    let current_block = await provider.getBlock((await provider.getBlockNumber()) - 30);
-    if (current_block.number < context.startBlock) {
-        current_block = await wait_for_block(
-            provider,
-            context.startBlock,
-            context.rate
-        );
-    }
-    await init_rewards(context, current_block.number);
-};
-
 const run_propose = async (context: Context) => {
     const { provider } = context;
-    let current_block = await provider.getBlock((await provider.getBlockNumber()) - 30);
-    assert(
-        current_block.number < context.startBlock,
-        "run_propose: not yet past start block"
-    );
-    current_block = await wait_for_block(provider, context.startBlock, context.rate);
-
-    await bump_rewards(context, current_block.number);
+    const current = await provider.getBlockNumber();
+    while (true) {
+        let last = await context.multiplexer.lastPublishedMerkleData();
+        let lastConfirmed = await context.multiplexer.lastPublishedMerkleData({
+            blockTag: current - 30,
+        });
+        if (!_.isEqual(last, lastConfirmed)) {
+            await wait_for_block(provider, current, context.rate); // waits 30 confirmations
+            lastConfirmed = await context.multiplexer.lastPublishedMerkleData({
+                blockTag: current,
+            });
+        }
+        last = await context.multiplexer.lastPublishedMerkleData();
+        assert(
+            _.isEqual(last, lastConfirmed),
+            "run_propose: abnormalities in last published merkle data, another proposer is running?"
+        );
+        const startBlock = await provider.getBlock(context.startBlock);
+        const lastStart = await provider.getBlock(last.startBlock.toNumber());
+        const lastEnd = await provider.getBlock(last.endBlock.toNumber());
+        const nextEndTime = // since it's complicated because of contract logic to make cycles perfectly match up with epochs
+            startBlock.timestamp +
+            (Math.floor((lastEnd.timestamp - startBlock.timestamp) / context.epoch) +
+                1) *
+                context.epoch;
+        const nextEnd = await wait_for_time(provider, nextEndTime, context.rate);
+        const propose = await bump_rewards(context, last, lastStart, lastEnd, nextEnd);
+        const fromEvent = await wait_for_next_proposed(
+            provider,
+            context.multiplexer,
+            context.rate,
+            last.cycle.toNumber()
+        );
+        assert(
+            _.isEqual(propose, fromEvent),
+            "run_propose: proposed root does not match root from event, another proposer is running?"
+        );
+    }
 };
 
-
-export { Context, init_rewards, bump_rewards, approve_rewards, run_init, run_propose };
+export { Context, init_rewards, bump_rewards, approve_rewards, run_propose };
