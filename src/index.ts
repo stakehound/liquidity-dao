@@ -4,7 +4,7 @@ import { readFileSync } from "fs";
 import { Context, run_propose, approve_rewards, init_rewards } from "./system";
 import S3 from "aws-sdk/clients/s3";
 import { JsonRpcProvider } from "@ethersproject/providers";
-import { Wallet, providers } from "ethers";
+import { Wallet, providers, Signer } from "ethers";
 import { Multiplexer__factory } from "../typechain";
 import { getAddress } from "ethers/lib/utils";
 
@@ -78,9 +78,9 @@ const argv = yargs(process.argv.slice(2))
     )
     .demandCommand(1).argv;
 
-const run_with_context = (func: (context: Context) => Promise<void>) => {
+const run_with_context = (func: (context: Context, signer: Signer) => Promise<void>) => {
     const con = fetchContext(argv.config!);
-    func(con)
+    func(con, con.signer)
         .then(() => process.exit(0))
         .catch((error) => {
             console.error(error);

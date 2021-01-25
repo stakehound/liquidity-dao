@@ -3,11 +3,11 @@
 pragma solidity ^0.6.0;
 pragma experimental ABIEncoderV2;
 
-import "deps/@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/cryptography/MerkleProofUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/cryptography/MerkleProofUpgradeable.sol";
 import "interfaces/stakehound/ICumulativeMultiTokenMerkleDistributor.sol";
 import "interfaces/stakehound/IStakedToken.sol";
 
@@ -58,11 +58,11 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
 
     /// @notice Root updaters can update the root
     function _onlyRootProposer() internal view {
-        require(hasRole(ROOT_PROPOSER_ROLE, msg.sender), "onlyRootUpdater");
+        require(hasRole(ROOT_PROPOSER_ROLE, msg.sender), "onlyRootProposer");
     }
 
     function _onlyRootValidator() internal view {
-        require(hasRole(ROOT_VALIDATOR_ROLE, msg.sender), "onlyRootUpdater");
+        require(hasRole(ROOT_VALIDATOR_ROLE, msg.sender), "onlyRootValidator");
     }
 
     function _onlyPauser() internal view {
@@ -86,7 +86,7 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
     }
 
     function valueFromShares(address _stakedToken, uint256 shares) internal view returns (uint256) {
-        uint256 sharesPerToken = IStakedToken(_stakedToken).totalShares() / IStakedToken(_stakedToken).totalShares();
+        uint256 sharesPerToken = IStakedToken(_stakedToken).totalShares() / IStakedToken(_stakedToken).totalSupply();
         return shares / sharesPerToken;
     }
 

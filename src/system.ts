@@ -36,7 +36,8 @@ interface Context {
 
 //  Proposer
 
-const init_rewards = async (context: Context) => {
+const init_rewards = async (context: Context, proposer: Signer) => {
+    context = { ...context, multiplexer: context.multiplexer.connect(proposer)}
     const { s3, provider } = context;
     const end = await provider.getBlock((await provider.getBlockNumber()) - 30);
     const startBlock = await provider.getBlock(context.startBlock);
@@ -80,11 +81,13 @@ const init_rewards = async (context: Context) => {
 
 const bump_rewards = async (
     context: Context,
+    proposer: Signer,
     last: Awaited<ReturnType<Context["multiplexer"]["lastPublishedMerkleData"]>>,
     lastStart: Block,
     lastEnd: Block,
     nextEnd: Block
 ) => {
+    context = { ...context, multiplexer: context.multiplexer.connect(proposer)}
     const { s3, provider } = context;
     assert(
         lastStart.number === context.startBlock,
@@ -166,7 +169,9 @@ const bump_rewards = async (
 
 // Approver
 
-const approve_rewards = async (context: Context) => {
+const approve_rewards = async (context: Context, approver: Signer) => {
+    context = { ...context, multiplexer: context.multiplexer.connect(approver)}
+
     const { s3, provider } = context;
     const proposed = await context.multiplexer.lastProposedMerkleData();
     const published = await context.multiplexer.lastPublishedMerkleData();
@@ -224,7 +229,8 @@ const approve_rewards = async (context: Context) => {
     console.log(`Approving merkle root ${merkle.root} ${txr.transactionHash}`);
 };
 
-const run_propose = async (context: Context) => {
+const run_propose = async (context: Context, proposer: Signer) => {
+    context = { ...context, multiplexer: context.multiplexer.connect(proposer)}
     const { provider } = context;
     const current = await provider.getBlockNumber();
     while (true) {
@@ -252,7 +258,7 @@ const run_propose = async (context: Context) => {
                 1) *
                 context.epoch;
         const nextEnd = await wait_for_time(provider, nextEndTime, context.rate);
-        const propose = await bump_rewards(context, last, lastStart, lastEnd, nextEnd);
+        const propose = await bump_rewards(context, proposer, last, lastStart, lastEnd, nextEnd);
         const fromEvent = await wait_for_next_proposed(
             provider,
             context.multiplexer,

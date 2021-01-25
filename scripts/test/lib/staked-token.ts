@@ -1,11 +1,13 @@
 import _ from "lodash";
 import { ethers, upgrades } from "hardhat";
-import { StakedToken, StakedToken__factory } from "../../../typechain";
+import { StakedToken, StakedToken__factory, Multiplexer } from "../../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber } from "ethers";
 import { TokenReward } from "../../../src/calc_stakes";
-import { signal_token_locks } from "../../../src/geyser-utils";
+import { signal_token_locks, sharesToValue, valueToShares } from "../../../src/utils";
 import { TokensMap, GeysersMap } from "../../lib/types";
+import { sequentialize } from "../../lib/utils";
+import { getAddress } from "ethers/lib/utils";
 
 export const tokenSymbols = ["SFIRO", "SETH", "SXEM"] as const;
 
@@ -22,12 +24,16 @@ const stakedNames: { [t: string]: string } = {
 };
 
 const deploy_staked_tokens = async (): Promise<TokensMap> => {
-    const tokens = await Promise.all(
-        tokenSymbols.map((symbol) =>
+    const tokens = await sequentialize(
+        tokenSymbols.map((symbol) => () =>
             deploy_staked_token(stakedNames[symbol], symbol, stakedDecimals[symbol])
         )
     );
-    return _.transform(tokens, (acc: TokensMap, val) => (acc[val.address] = val), {});
+    return _.transform(
+        tokens,
+        (acc: TokensMap, val) => (acc[getAddress(val.address)] = val),
+        {}
+    );
 };
 
 const deploy_staked_token = async (
@@ -36,7 +42,7 @@ const deploy_staked_token = async (
     tokenDecimals: number
 ) => {
     const tokenMaxSupply = ethers.BigNumber.from(10).pow(10 + tokenDecimals + 8);
-    const tokenInitialSupply = ethers.BigNumber.from("0");
+    const tokenInitialSupply = ethers.BigNumber.from(10).pow(tokenDecimals);
 
     // We get the contract to deploy
     const StakedToken = (await ethers.getContractFactory(
@@ -61,17 +67,17 @@ const mint_and_stake = async (
     signers: SignerWithAddress[]
 ) => {
     await Promise.all(
-        signers.map(async (x) =>
+        signers.map((signer) =>
             Promise.all(
-                _.map(tokens, async (stakedToken, tokenName) => {
-                    const geyser = geysers[tokenName];
+                _.map(geysers, async (geyser) => {
+                    const stakedToken = tokens[await geyser.getStakingToken()];
                     const amt = BigNumber.from(10)
                         .pow(await stakedToken.decimals())
                         .mul(300);
-                    await stakedToken.mint(x.address, amt);
-                    const _token = stakedToken.connect(x);
+                    await stakedToken.mint(signer.address, amt);
+                    const _token = stakedToken.connect(signer);
                     await _token.approve(geyser.address, amt);
-                    const _geyser = geyser.connect(x);
+                    const _geyser = geyser.connect(signer);
                     await (await _geyser.stake(amt, "0x")).wait(1);
                 })
             )
@@ -81,6 +87,7 @@ const mint_and_stake = async (
 
 const mint_and_signal = async (
     tokens: TokensMap,
+    multiplexer: Multiplexer,
     geysers: GeysersMap,
     startTime: number,
     durationSec: number
@@ -93,9 +100,14 @@ const mint_and_signal = async (
             const amt = BigNumber.from(10)
                 .pow(await token.decimals())
                 .mul(toDistributePerGeyser);
-            _.map(geysers, async (geyser, geyserAddress) => {
-                await geyser.signalTokenLock(token.address, amt, durationSec, startTime);
-                await token.mint(geyser.address, amt);
+            _.map(geysers, async (geyser) => {
+                await geyser.signalTokenLock(
+                    token.address,
+                    await valueToShares(token, amt),
+                    durationSec,
+                    startTime
+                );
+                await token.mint(multiplexer.address, amt);
             });
         })
     );

@@ -9,12 +9,6 @@ import {
     StakedToken__factory,
     StakedToken,
 } from "../typechain";
-import {
-    deploy_test,
-    init_test,
-    DeployTestContext,
-    unstake_all,
-} from "./utils/deploy-test";
 import { Log } from "@ethersproject/providers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
 import stakedTokenAbi from "../src/abi/StakedToken.json";
@@ -28,6 +22,8 @@ import {
     validate_distributed,
 } from "../src/calc_stakes";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import { deploy_test_scenario, DeployTestScenarioContext } from "../scripts/test/lib/test-scenario";
+import { unstake_all } from "./utils/deploy-test";
 
 const giface = new ethers.utils.Interface(
     geyserAbi.abi
@@ -38,41 +34,33 @@ use(solidity);
 
 describe("Action tests", function () {
     let signers: SignerWithAddress[];
-    let con: DeployTestContext;
+    let con: DeployTestScenarioContext;
     this.beforeAll(async function () {
         this.timeout(100000);
         signers = await ethers.getSigners();
     });
     this.beforeEach(async function () {
         this.timeout(100000);
-        con = await deploy_test();
+        con = await deploy_test_scenario();
     });
     it("clear schedules stops rewards from accumulating", async function () {
         this.timeout(100000);
-        const startBlock = await ethers.provider.getBlock(
-            await ethers.provider.getBlockNumber()
-        );
-        await init_test(con);
         const endBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
-        const geysers = [
-            con.geysers.seth.address,
-            con.geysers.sfiro.address,
-            con.geysers.sxem.address,
-        ];
+        const geysers = _.keys(con.geysers)
         const oneday = await fetch_system_rewards(
             ethers.provider,
             geysers,
-            startBlock.number,
+            con.startBlock.number,
             endBlock.number,
-            startBlock.timestamp + 60 * 60 * 24,
+            con.startBlock.timestamp + 60 * 60 * 24,
             1
         );
 
         await HRE.network.provider.request({
             method: "evm_setNextBlockTimestamp",
-            params: [startBlock.timestamp + 60 * 60 * 24],
+            params: [con.startBlock.timestamp + 60 * 60 * 24],
         });
 
         await Promise.all(
@@ -89,9 +77,9 @@ describe("Action tests", function () {
         const twodays = await fetch_system_rewards(
             ethers.provider,
             geysers,
-            startBlock.number,
+            con.startBlock.number,
             newEnd.number,
-            startBlock.timestamp + 60 * 60 * 24 * 2,
+            con.startBlock.timestamp + 60 * 60 * 24 * 2,
             1
         );
 
@@ -101,31 +89,23 @@ describe("Action tests", function () {
     });
     it("unstaking stops rewards from accumulating", async function () {
         this.timeout(100000);
-        const startBlock = await ethers.provider.getBlock(
-            await ethers.provider.getBlockNumber()
-        );
-        await init_test(con);
         const endBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
-        const geysers = [
-            con.geysers.seth.address,
-            con.geysers.sfiro.address,
-            con.geysers.sxem.address,
-        ];
+        const geysers = _.keys(con.geysers)
         const onedayP = fetch_system_rewards(
             ethers.provider,
             geysers,
-            startBlock.number,
+            con.startBlock.number,
             endBlock.number,
-            startBlock.timestamp + 60 * 60 * 24,
+            con.startBlock.timestamp + 60 * 60 * 24,
             1,
             false
         );
 
         await HRE.network.provider.request({
             method: "evm_setNextBlockTimestamp",
-            params: [startBlock.timestamp + 60 * 60 * 24],
+            params: [con.startBlock.timestamp + 60 * 60 * 24],
         });
 
         await unstake_all(con);
@@ -139,9 +119,9 @@ describe("Action tests", function () {
             await fetch_system_rewards(
                 ethers.provider,
                 geysers,
-                startBlock.number,
+                con.startBlock.number,
                 newEnd.number,
-                startBlock.timestamp + 60 * 60 * 24 * 2,
+                con.startBlock.timestamp + 60 * 60 * 24 * 2,
                 1,
                 false
             ),

@@ -2,11 +2,11 @@
 
 pragma solidity ^0.6.0;
 
-import "deps/@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "interfaces/stakehound/IStakehoundGeyser.sol";
-import"contracts/stakehound-timelock/Executor.sol";
+import "contracts/stakehound-timelock/Executor.sol";
 
 /**
  * @title A holder of tokens to be distributed via a Geyser.

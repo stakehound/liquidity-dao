@@ -68,7 +68,9 @@ const collectActions = (logs: Log[]) => {
                     ? "clear"
                     : null;
             if (!type) {
-                console.error("parseEvent: unexpected event");
+                if(!parsed.name.includes('Role')) {
+                    console.error(`parseEvent: unexpected event ${parsed.name}`);
+                }
                 continue;
             }
             if (type === "clear") {

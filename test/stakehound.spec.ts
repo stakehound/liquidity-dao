@@ -10,23 +10,11 @@ import {
     StakedToken__factory,
     StakedToken,
 } from "../typechain";
-import { deploy_test, init_test, DeployTestContext } from "./utils/deploy-test";
-import { JsonRpcSigner, Log } from "@ethersproject/providers";
+
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
 import stakedTokenAbi from "../src/abi/StakedToken.json";
 import { Interface, LogDescription, BytesLike } from "ethers/lib/utils";
-import { fetchEvents, collectActions } from "../src/events";
-import { keccak256 } from "ethereumjs-util";
-import {
-    fetch_system_rewards,
-    create_calc_geyser_stakes,
-    get_rewards,
-    combine_rewards,
-    compare_rewards,
-    play_system_rewards,
-    validate_rewards,
-} from "../src/calc_stakes";
-import { log_pair } from "./utils/test";
+
 import {
     wait_for_next_proposed,
     wait_for_block,
@@ -37,31 +25,18 @@ import MultiMerkle, { rewards_to_claims, encode_claim } from "../src/MultiMerkle
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import S3 from "aws-sdk/clients/s3";
 import cids from "cids";
-import { upload_rewards, fetch_rewards } from "../src/s3";
+import { fetch_rewards } from "../src/s3";
 import { approve_rewards, init_rewards, bump_rewards, Context } from "../src/system";
+import {
+    deploy_test_scenario,
+    DeployTestScenarioContext,
+} from "../scripts/test/lib/test-scenario";
 const giface = new ethers.utils.Interface(
     geyserAbi.abi
 ) as StakehoundGeyser["interface"];
 const siface = new ethers.utils.Interface(stakedTokenAbi) as StakedToken["interface"];
 
 use(solidity);
-
-const MAX_NUMBER = BigNumber.from(
-    "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-);
-
-function tryParseLogs(logs: Log[], ifaces: Interface[]) {
-    const out: LogDescription[] = [];
-    for (const log of logs) {
-        for (const iface of ifaces) {
-            try {
-                out.push(iface.parseLog(log));
-                break;
-            } catch (e) {}
-        }
-    }
-    return out;
-}
 
 const cid_from_hash = (hash: BytesLike) => {
     const _hash = Buffer.from("1220" + hash.toString().slice(2), "hex");
@@ -77,19 +52,19 @@ const credentials = {
 describe("Stakehound", function () {
     let signers: SignerWithAddress[];
     let multiplexer: Multiplexer;
-    let context: DeployTestContext;
+    let context: DeployTestScenarioContext;
     const s3 = new S3({
         credentials,
     });
     this.beforeAll(async function () {
         this.timeout(100000);
         signers = await ethers.getSigners();
-        context = await deploy_test();
+        context = await deploy_test_scenario();
         ({ multiplexer } = context);
     });
     it("rewards type", async function () {
         this.timeout(100000);
-        const startBlock = await init_test(context);
+        const { startBlock, proposer, approver } = context;
         await HRE.network.provider.request({
             method: "evm_setNextBlockTimestamp",
             params: [startBlock.timestamp + 60 * 60 * 24],
@@ -99,11 +74,7 @@ describe("Stakehound", function () {
                 method: "evm_mine",
             });
         }
-        const geysers = [
-            context.geysers.seth.address,
-            context.geysers.sfiro.address,
-            context.geysers.sxem.address,
-        ];
+        const geysers = _.keys(context.geysers);
         const proposeContext: Context = {
             startBlock: startBlock.number,
             multiplexer,
@@ -123,15 +94,25 @@ describe("Stakehound", function () {
             provider: ethers.provider,
             rate: 1000,
         };
-        await init_rewards(proposeContext);
-        await approve_rewards(proposeContext);
+       
+        await init_rewards(proposeContext, proposer);
+        await approve_rewards(proposeContext, approver);
         const lastpub = await multiplexer.lastPublishedMerkleData();
+        await HRE.network.provider.request({
+            method: "evm_setNextBlockTimestamp",
+            params: [startBlock.timestamp + 60 * 60 * 24 * 2],
+        });
         for (let i = 0; i < 40; i++) {
             await HRE.network.provider.request({
                 method: "evm_mine",
             });
         }
-        const waitP = wait_for_next_proposed(ethers.provider, multiplexer, lastpub.cycle.toNumber(), 1000);
+        const waitP = wait_for_next_proposed(
+            ethers.provider,
+            multiplexer,
+            lastpub.cycle.toNumber(),
+            1000
+        );
         const nextEndBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
@@ -141,6 +122,7 @@ describe("Stakehound", function () {
         const lastpubEnd = await ethers.provider.getBlock(lastpub.endBlock.toNumber());
         await bump_rewards(
             proposeContext,
+            proposer,
             lastpub,
             lastpubStart,
             lastpubEnd,
@@ -152,16 +134,16 @@ describe("Stakehound", function () {
             });
         }
         expect((await waitP).cycle.toNumber()).to.eq(lastpub.cycle.toNumber() + 1);
-        await approve_rewards(proposeContext);
+        await approve_rewards(proposeContext, approver);
         const last = await multiplexer.lastPublishedMerkleData();
         const rewards = await fetch_rewards(s3, last.root);
         const m = MultiMerkle.fromMerkleRewards(last.cycle.toNumber(), rewards);
         const _s = signers[3];
         const caddress = _.keys(m.merkleRewards.claims).find((c) => c === _s.address)!;
         const c = m.merkleRewards.claims[caddress]!;
-        const balances = await Promise.all(
+        const shares = await Promise.all(
             c.tokens.map((x) =>
-                StakedToken__factory.connect(x, ethers.provider).balanceOf(_s.address)
+                StakedToken__factory.connect(x, ethers.provider).sharesOf(_s.address)
             )
         );
         await multiplexer
@@ -172,15 +154,17 @@ describe("Stakehound", function () {
                 last.cycle,
                 m.getHexProof({ ...c, cycle: last.cycle.toNumber(), account: caddress })
             );
-        const newBalances = await Promise.all(
+        const newShares = await Promise.all(
             c.tokens.map((x) =>
-                StakedToken__factory.connect(x, ethers.provider).balanceOf(_s.address)
+                StakedToken__factory.connect(x, ethers.provider).sharesOf(_s.address)
             )
-        ).then((all) => all.map((x) => x.toString()));
-        const expected = _.zip(balances, c.amounts).map(([b, c]) =>
-            b!.add(c!).toString()
         );
-        expect(_.isEqual(newBalances, expected)).to.eq(true);
+        const expected = _.zip(shares, c.amounts).map(([b, c]) => b!.add(c!));
+        expect(
+            _.zip(newShares, expected).every(([n, e]) =>
+                n!.sub(e!).lt(BigNumber.from(10).pow(n!.toString().length - 4))
+            )
+        ).to.eq(true);
     });
     it("test wait_for_time", async function () {
         this.timeout(100000);

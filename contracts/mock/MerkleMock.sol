@@ -1,6 +1,6 @@
 pragma solidity ^0.6.12;
 
-import "deps/@openzeppelin/contracts-upgradeable/cryptography/MerkleProofUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/cryptography/MerkleProofUpgradeable.sol";
 
 contract MerkleMock {
     function verify(

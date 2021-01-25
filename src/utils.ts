@@ -1,6 +1,7 @@
-import _ from 'lodash'
+import _ from "lodash";
 import { BigNumber } from "ethers";
 import { TokensMap, GeysersMap } from "../scripts/lib/types";
+import { StakedToken } from "../typechain";
 
 const signal_token_locks = async (
     tokens: TokensMap,
@@ -23,7 +24,6 @@ const signal_token_locks = async (
     );
 };
 
-
 const add_distribution_tokens = async (geysers: GeysersMap, tokens: TokensMap) => {
     await Promise.all(
         _.map(geysers, (geyser) =>
@@ -36,4 +36,18 @@ const add_distribution_tokens = async (geysers: GeysersMap, tokens: TokensMap) =
     );
 };
 
-export { signal_token_locks, add_distribution_tokens}
+const valueToShares = async (st: StakedToken, val: BigNumber) => {
+    const shares = await st.totalShares();
+    const supply = await st.totalSupply();
+    const sharesPerToken = await shares.div(supply);
+    return val.mul(sharesPerToken);
+};
+
+const sharesToValue = async (st: StakedToken, shares: BigNumber) => {
+    const tshares = await st.totalShares();
+    const tsupply = await st.totalSupply();
+    const sharesPerToken = tshares.div(tsupply);
+    return shares.div(sharesPerToken);
+};
+
+export { signal_token_locks, add_distribution_tokens, valueToShares, sharesToValue };

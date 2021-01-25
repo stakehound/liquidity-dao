@@ -12,7 +12,7 @@ const upload_rewards = (s3: S3, rewards: MerkleRewards) => {
     return new Promise<void>((res, rej) =>
         s3.upload(req, function (err, data) {
             if (err) {
-                console.log("upload_rewards: Error", err);
+                console.error("upload_rewards: Error", err);
                 rej();
             }
             if (data) {
@@ -31,12 +31,12 @@ const fetch_rewards = (s3: S3, merkleRoot: string) => {
     return new Promise<MerkleRewards>((res, rej) =>
         s3.getObject(req, function (err, data) {
             if (err) {
-                console.log("fetch_rewards: Error", err);
+                console.error("fetch_rewards: Error", err);
                 rej();
             }
             if (data) {
                 if (!data.Body) {
-                    console.log("fetch_rewards: didn't get response body");
+                    console.error("fetch_rewards: didn't get response body");
                     rej();
                     return;
                 }

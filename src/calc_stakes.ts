@@ -6,7 +6,6 @@ import { Provider } from "@ethersproject/providers";
 import { StakehoundConfig } from "./config";
 import { collectActions, fetchEvents } from "./events";
 import { StakehoundGeyser__factory } from "../typechain";
-import { log_pair } from "../test/utils/test";
 
 BigNumber.set({
     ROUNDING_MODE: BigNumber.ROUND_FLOOR,
@@ -450,12 +449,12 @@ const compare_token_rewards = (r: TokenReward[]) => {
 
 const validate_rewards = (r: Rewards) => {
     // console.log(
-    //     "vlida\n",
+    //     "validate_rewards:\n",
     //     _.zip(_.values(r.rewards), _.values(r.rewardsDistributed)).map(([x, y]) => [
     //         x!.toFixed(0),
     //         y!.toFixed(0),
     //     ]),
-    //     '\nvlidrange\n',
+    //     '\nvalidate_rewards range:\n',
     //     _.zip(
     //         _.values(r.rewardsInRange),
     //         _.values(r.rewardsDistributedInRange)
@@ -596,7 +595,7 @@ const create_calc_system_stakes = (geysers: { [addr: string]: StakehoundConfig }
             cgs,
             (acc: SystemState, calc, key) => {
                 acc[key] = calc(acts[key], absTime, relTime, endTime);
-                validate_rewards(get_rewards(acc[key], 0))
+                // validate_rewards(get_rewards(acc[key], 0))
             },
             <SystemState>{}
         );
@@ -671,21 +670,29 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
     };
 
     const unstake = (st: GeyserState, user: string, unstake: UnstakeAction) => {
-        process_share_seconds(st, unstake.timestamp);
-        st.lastUpdate = unstake.timestamp;
-        let toUnstake = unstake.shares;
-        const u = st.users[user];
-        let i = u.stakes.length - 1;
-        while (toUnstake.gt(0)) {
-            const stake = u.stakes[i];
-            if (stake.shares.lte(toUnstake)) {
-                u.stakes.pop();
-                toUnstake = toUnstake.minus(stake.shares);
-            } else {
-                stake.shares = stake.shares.minus(toUnstake);
-                toUnstake = new BigNumber(0);
+        if (unstake.shares.gt(0)) {
+            process_share_seconds(st, unstake.timestamp);
+            st.lastUpdate = unstake.timestamp;
+            let toUnstake = unstake.shares;
+            const u = st.users[user];
+            let i = u.stakes.length - 1;
+            while (toUnstake.gt(0)) {
+                if (i < 0) {
+                    console.error(
+                        "calc_stakes_unstake: more shares being unstaked than were registered staked"
+                    );
+                    break;
+                }
+                const stake = u.stakes[i];
+                if (stake.shares.lte(toUnstake)) {
+                    u.stakes.pop();
+                    toUnstake = toUnstake.minus(stake.shares);
+                } else {
+                    stake.shares = stake.shares.minus(toUnstake);
+                    toUnstake = new BigNumber(0);
+                }
+                i--;
             }
-            i--;
         }
     };
 
