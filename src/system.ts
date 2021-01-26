@@ -37,6 +37,7 @@ interface StakehoundContext {
 //  Proposer
 
 const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
+    logger.info('init_rewards called')
     context = { ...context, multiplexer: context.multiplexer.connect(proposer) };
     const { s3, provider, startBlock, multiplexer } = context;
     const last = await multiplexer.lastProposedMerkleData();
@@ -95,6 +96,7 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
 };
 
 const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
+    logger.info('bump_rewards called')
     context = { ...context, multiplexer: context.multiplexer.connect(proposer) };
     const { s3, provider, startBlock, multiplexer } = context;
     const last = await multiplexer.lastProposedMerkleData();
@@ -144,7 +146,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
             context.epoch;
     if (0 >= latestConfirmedEpoch - lastEnd.timestamp) {
         const waitTime = latestConfirmedEpoch + context.epoch;
-        logger.info(`waiting until ${waitTime}`);
+        logger.info(`bump_rewards: waiting until ${waitTime} to propose a reward`);
         end = await wait_for_time(provider, waitTime, context.rate);
     }
     logger.info("playing events upon last system rewards");
@@ -194,6 +196,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
 // Approver
 
 const approve_rewards = async (context: StakehoundContext, approver: Signer) => {
+    logger.info('approve_rewards called')
     context = { ...context, multiplexer: context.multiplexer.connect(approver) };
 
     const { s3, provider, startBlock, multiplexer } = context;
@@ -220,9 +223,9 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
                 context.epoch,
         "approve_rewards: multiple published in one epoch, are multiple approvers and proposers running?"
     );
-
     // could we turn this into its own waiter - i.e. keep going until no changes for 30 blocks
     if (_.isEqual(proposed, published) || !_.isEqual(proposed, proposedNow)) {
+        logger.info('approve_rewards: waiting for next proposal')
         const { lastPropose, publishNow, block } = await wait_for_next_proposed(
             provider,
             multiplexer,

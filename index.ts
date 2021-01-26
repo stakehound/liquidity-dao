@@ -1,14 +1,18 @@
 import path from "path";
 import yargs from "yargs";
 import { readFileSync } from "fs";
-import { StakehoundContext, run_propose, init_rewards, run_approve, run_init } from "./src/system";
+import {
+    StakehoundContext,
+    run_propose,
+    init_rewards,
+    run_approve,
+    run_init,
+} from "./src/system";
 import S3 from "aws-sdk/clients/s3";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { Wallet, Signer, providers } from "ethers";
 import { fetchContext } from "./src/utils";
-import logge from "./src/logger";
-
-
+import logger from "./src/logger";
 
 const argv = yargs(process.argv.slice(2))
     .command("init <config>", "init first rewards", (yargv) =>
@@ -31,19 +35,25 @@ const argv = yargs(process.argv.slice(2))
             demandOption: true,
             describe: "JSON file to read config",
         })
-    ).option('logfile', {
-        type: 'string',
+    )
+    .option("logfile", {
+        type: "string",
         demandOption: true,
-        describe: 'logfile'
+        describe: "logfile",
     })
     .demandCommand(1).argv;
-
 
 const run_with_context = (
     func: (context: StakehoundContext, signer: Signer) => Promise<void>
 ) => {
     fetchContext(argv.config!)
-        .then((con) => func(con, con.signer))
+        .then((con) => {
+            logger.info({
+                role: argv._[0],
+                epoch: `${con.epoch / 1000 / 60} minutes`
+            })
+            return func(con, con.signer);
+        })
         .then(() => process.exit(0))
         .catch((error) => {
             logger.error(error);

@@ -18,9 +18,10 @@ const wait_for_block = async (
     blockNumber: number,
     rate: number
 ) => {
+    logger.info(`wait_for_block called`);
     let n = await provider.getBlockNumber();
     while (n < blockNumber + 30) {
-        logger.info('wait_for_block: sleep')
+        logger.info("wait_for_block: sleep");
         await sleep(rate);
         n = await provider.getBlockNumber();
     }
@@ -28,9 +29,10 @@ const wait_for_block = async (
 };
 
 const wait_for_time = async (provider: Provider, time: number, rate: number) => {
+    logger.info(`wait_for_time called`);
     let b = await provider.getBlock((await provider.getBlockNumber()) - 30);
     while (b.timestamp < time) {
-        logger.info('wait_for_time: sleep')
+        logger.info("wait_for_time: sleep");
         await sleep(rate);
         b = await provider.getBlock((await provider.getBlockNumber()) - 30);
     }
@@ -44,6 +46,7 @@ const wait_for_next_proposed = async (
     lastCycle: number,
     rate: number
 ) => {
+    logger.info(`wait_for_next_proposed called`);
     let block = await provider.getBlock("latest");
     if (block.number - fromBlock >= 30) {
         await wait_for_block(provider, block.number, rate);
@@ -58,7 +61,7 @@ const wait_for_next_proposed = async (
     while (!done) {
         const bn = await provider.getBlockNumber();
         if (bn <= filter.fromBlock + 30) {
-            logger.info("wait_for_next_proposed: sleep")
+            logger.info("wait_for_next_proposed: sleep");
             await sleep(rate);
             continue;
         }
