@@ -158,10 +158,17 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         end = await wait_for_time(provider, waitTime, context.rate);
     }
     const newLastProposed = await multiplexer.lastProposedMerkleData();
+    const newLastPublished = await multiplexer.lastPublishedMerkleData();
+    // following is another pwn situation
     assert(
         newLastProposed.cycle === last.cycle,
-        `bump_rewards: expected lastProposed not current lastProposed`
+        `bump_rewards: expected lastProposed to be same as lastProposed`
     );
+    assert(
+        newLastProposed.cycle === newLastPublished.cycle,
+        `bump_rewards: expected lastPublished to be same as lastProposed`
+    );
+
     logger.info("playing events upon last system rewards");
     const newRewards = await play_system_rewards(
         r,
