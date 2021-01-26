@@ -4,7 +4,14 @@ import { Multiplexer } from "../typechain/Multiplexer";
 import { assert } from "ts-essentials";
 import logger from "./logger";
 
-const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
+const sleep = (ms: number) =>
+    new Promise((res) => {
+        logger.info(`going to sleep for ${ms / 1000 / 60} minutes`);
+        setTimeout(() => {
+            logger.info(`waking up`);
+            res();
+        }, ms);
+    });
 
 const wait_for_block = async (
     provider: Provider,
@@ -13,6 +20,7 @@ const wait_for_block = async (
 ) => {
     let n = await provider.getBlockNumber();
     while (n < blockNumber + 30) {
+        logger.info('wait_for_block: sleep')
         await sleep(rate);
         n = await provider.getBlockNumber();
     }
@@ -22,6 +30,7 @@ const wait_for_block = async (
 const wait_for_time = async (provider: Provider, time: number, rate: number) => {
     let b = await provider.getBlock((await provider.getBlockNumber()) - 30);
     while (b.timestamp < time) {
+        logger.info('wait_for_time: sleep')
         await sleep(rate);
         b = await provider.getBlock((await provider.getBlockNumber()) - 30);
     }
@@ -45,12 +54,12 @@ const wait_for_next_proposed = async (
         topics: [multiplexer.interface.getEventTopic("RootProposed")],
     };
     let done = false;
-    await sleep(rate);
     const proposedBlocks: number[] = [];
     while (!done) {
-        await sleep(rate);
         const bn = await provider.getBlockNumber();
         if (bn <= filter.fromBlock + 30) {
+            logger.info("wait_for_next_proposed: sleep")
+            await sleep(rate);
             continue;
         }
         logger.info(

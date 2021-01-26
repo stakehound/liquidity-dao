@@ -2,7 +2,7 @@ import _ from "lodash";
 import { Awaited } from "ts-essentials";
 import { Multiplexer } from "../typechain";
 import { Provider, Block } from "@ethersproject/providers";
-import { Signer }from "ethers";
+import { Signer } from "ethers";
 import {
     fetch_system_rewards,
     RewardsFixed,
@@ -81,7 +81,7 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
         end.number
     );
     logger.info(
-        `Init: Proposed merkle root ${merkle.merkleRewards.merkleRoot} with tx ${tx.hash}`
+        `Init: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot} with tx ${tx.hash}`
     );
     const seven = tx.wait(7).then((tx) => {
         logger.info(
@@ -108,6 +108,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
     //     startBlock.timestamp +
     //     Math.floor((lastEnd.timestamp - startBlock.timestamp) / context.epoch) *
     //         context.epoch;
+    logger.info("fetching system rewards from events");
     const r = await fetch_system_rewards(
         provider,
         context.geysers,
@@ -142,13 +143,11 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         Math.floor((end.timestamp - startBlock.timestamp) / context.epoch) *
             context.epoch;
     if (0 >= latestConfirmedEpoch - lastEnd.timestamp) {
-        end = await wait_for_time(
-            provider,
-            latestConfirmedEpoch + context.epoch,
-            context.rate
-        );
+        const waitTime = latestConfirmedEpoch + context.epoch;
+        logger.info(`waiting until ${waitTime}`);
+        end = await wait_for_time(provider, waitTime, context.rate);
     }
-
+    logger.info("playing events upon last system rewards");
     const newRewards = await play_system_rewards(
         r,
         provider,
@@ -177,7 +176,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         end.number
     );
     logger.info(
-        `Bump: Proposed merkle root ${merkle.merkleRewards.merkleRoot} with tx hash ${tx.hash}`
+        `Bump: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot} with tx hash ${tx.hash}`
     );
     const seven = tx.wait(7).then((tx) => {
         logger.info(
@@ -278,7 +277,9 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         merkle.cycle,
         proposedEnd.number
     );
-    logger.info(`Approve: Approving merkle root ${merkle.root} ${tx.hash}`);
+    logger.info(
+        `Approve: Approving cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.root} ${tx.hash}`
+    );
     const seven = tx.wait(7).then((txn) => {
         logger.info(
             `Approve: Mined into block ${txn.blockNumber} with hash ${txn.blockNumber} and 7 confirmations`
@@ -328,14 +329,14 @@ const run_approve = async (context: StakehoundContext, approver: Signer) => {
                 await Promise.all([approved.seven, approved.thirty]);
             }
         } catch (e) {
-            logger.error(`run_approve: ${e}`);
+            logger.error(`run_approve failed: ${e}`);
             await sleep(1000 * 60 * 10); // try again in ten minutes
         }
     }
 };
 
 const run_init = async (context: StakehoundContext, proposer: Signer) => {
-    let done = false
+    let done = false;
     while (!done) {
         try {
             const init = await Promise.race([
@@ -345,12 +346,12 @@ const run_init = async (context: StakehoundContext, proposer: Signer) => {
                 })),
             ]);
             if ("error" in init) {
-                throw new Error("approve took too long");
+                throw new Error("init took too long");
             } else {
                 await Promise.all([init.seven, init.thirty]);
             }
         } catch (e) {
-            logger.error(`run_approve: ${e}`);
+            logger.error(`run_init failed: ${e}`);
             await sleep(1000 * 60 * 10); // try again in ten minutes
         }
     }

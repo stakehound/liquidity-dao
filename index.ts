@@ -6,7 +6,7 @@ import S3 from "aws-sdk/clients/s3";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { Wallet, Signer, providers } from "ethers";
 import { fetchContext } from "./src/utils";
-import logger from "./src/logger";
+import logge from "./src/logger";
 
 
 
