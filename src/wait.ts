@@ -4,11 +4,15 @@ import { Multiplexer } from "../typechain/Multiplexer";
 import { assert } from "ts-essentials";
 import logger from "./logger";
 
-const sleep = (ms: number) =>
+const sleep = (ms: number, loud: boolean = true) =>
     new Promise<void>((res) => {
-        logger.info(`going to sleep for ${ms / 1000 / 60} minutes`);
+        if (loud) {
+            logger.info(`going to sleep for ${ms / 1000 / 60} minutes`);
+        }
         setTimeout(() => {
-            logger.info(`waking up`);
+            if (loud) {
+                logger.info(`waking up`);
+            }
             res();
         }, ms);
     });

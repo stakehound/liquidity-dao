@@ -308,7 +308,7 @@ const run_propose = async (context: StakehoundContext, proposer: Signer) => {
         try {
             const bumped = await Promise.race([
                 bump_rewards(context, proposer),
-                sleep(1000 * (context.epoch + 60 * 10)).then(() => ({
+                sleep(1000 * (context.epoch + 60 * 10), false).then(() => ({
                     error: "timeout",
                 })),
             ]);
@@ -329,7 +329,7 @@ const run_approve = async (context: StakehoundContext, approver: Signer) => {
         try {
             const approved = await Promise.race([
                 approve_rewards(context, approver),
-                sleep(1000 * (context.epoch + 60 * 10)).then(() => ({
+                sleep(1000 * (context.epoch + 60 * 10), false).then(() => ({
                     error: "timeout",
                 })),
             ]);
@@ -351,7 +351,7 @@ const run_init = async (context: StakehoundContext, proposer: Signer) => {
         try {
             const init = await Promise.race([
                 init_rewards(context, proposer),
-                sleep(1000 * (context.epoch + 60 * 10)).then(() => ({
+                sleep(1000 * (context.epoch + 60 * 10), false).then(() => ({
                     error: "timeout",
                 })),
             ]);
