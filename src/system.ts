@@ -102,17 +102,24 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
     logger.info("bump_rewards called");
     context = { ...context, multiplexer: context.multiplexer.connect(proposer) };
     const { s3, provider, startBlock, multiplexer } = context;
-    const last = await multiplexer.lastProposedMerkleData();
+    const lastConfirmedBlock = await provider.getBlock(
+        (await provider.getBlockNumber()) - 30
+    );
+    const lastPub = await multiplexer.lastPublishedMerkleData({
+        blockTag: lastConfirmedBlock.number,
+    });
+    const last = await multiplexer.lastProposedMerkleData({
+        blockTag: lastConfirmedBlock.number,
+    });
     const lastEnd = await provider.getBlock(last.endBlock.toNumber());
     const fetchedLastRewards = await fetch_rewards(s3, last.root);
+    const newLastProposed = await multiplexer.lastProposedMerkleData();
+    const newLastPublished = await multiplexer.lastPublishedMerkleData();
     assert(
         last.root === fetchedLastRewards.merkleRoot,
         "bump_rewards: last published start block does not match last start block"
     );
-    // const lastConfirmedEpoch =
-    //     startBlock.timestamp +
-    //     Math.floor((lastEnd.timestamp - startBlock.timestamp) / context.epoch) *
-    //         context.epoch;
+
     logger.info("fetching system rewards from events");
     const r = await fetch_system_rewards(
         provider,
@@ -157,8 +164,16 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         );
         end = await wait_for_time(provider, waitTime, context.rate);
     }
-    const newLastProposed = await multiplexer.lastProposedMerkleData();
-    const newLastPublished = await multiplexer.lastPublishedMerkleData();
+
+    logger.info({
+        bump: {
+            propnow: newLastProposed.cycle.toNumber(),
+            pubnow: newLastPublished.cycle.toNumber(),
+            prop: last.cycle.toNumber(),
+            pub: lastPub.cycle.toNumber(),
+        },
+    });
+
     // following is another pwn situation
     assert(
         newLastProposed.cycle === last.cycle,
