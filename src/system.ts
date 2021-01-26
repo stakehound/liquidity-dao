@@ -75,15 +75,16 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
         "init_rewards: no claims, either no staking or too early"
     );
     await upload_rewards(s3, merkle.merkleRewards);
+    logger.info(
+        `Init: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot} with tx ${tx.hash}`
+    );
     const tx = await multiplexer.proposeRoot(
         merkle.root,
         merkle.root,
         merkle.cycle,
         end.number
     );
-    logger.info(
-        `Init: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot} with tx ${tx.hash}`
-    );
+
     const seven = tx.wait(7).then((tx) => {
         logger.info(
             `Init: Mined into block ${tx.blockNumber} with hash ${tx.blockNumber}`
@@ -171,15 +172,16 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
     );
     const merkle = MultiMerkle.fromRewards(newWithInit);
     await upload_rewards(s3, merkle.merkleRewards);
+    logger.info(
+        `Bump: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot} with tx hash ${tx.hash}`
+    );
     const tx = await multiplexer.proposeRoot(
         merkle.root,
         merkle.root,
         merkle.cycle,
         end.number
     );
-    logger.info(
-        `Bump: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot} with tx hash ${tx.hash}`
-    );
+
     const seven = tx.wait(7).then((tx) => {
         logger.info(
             `Bump: Mined into block ${tx.blockNumber} with hash ${tx.blockHash}`
@@ -274,15 +276,17 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         compare_merkle_rewards(fetchedRewards, merkle.merkleRewards),
         "approve_rewards: fetched rewards did not match calculated"
     );
+    logger.info(
+        `Approve: Approving cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.root} ${tx.hash}`
+    );
+    
     const tx = await multiplexer.approveRoot(
         merkle.root,
         merkle.root,
         merkle.cycle,
         proposedEnd.number
     );
-    logger.info(
-        `Approve: Approving cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.root} ${tx.hash}`
-    );
+
     const seven = tx.wait(7).then((txn) => {
         logger.info(
             `Approve: Mined into block ${txn.blockNumber} with hash ${txn.blockNumber} and 7 confirmations`
