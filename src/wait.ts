@@ -2,7 +2,7 @@ import _ from "lodash";
 import { Provider, Block } from "@ethersproject/providers";
 import { Multiplexer } from "../typechain/Multiplexer";
 import { assert } from "ts-essentials";
-import { logger } from "ethers";
+import logger from "./logger";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -66,14 +66,14 @@ const wait_for_next_proposed = async (
                         done = true;
                     }
                 } else {
-                    console.error(
+                    logger.error(
                         `wait_for_next_proposed: unexpected event ${JSON.stringify(
                             log
                         )} ${JSON.stringify(parsed)}`
                     );
                 }
             } catch (e) {
-                console.error(
+                logger.error(
                     `wait_for_next_proposed: failed to parse log ${log} error: ${e}`
                 );
             }

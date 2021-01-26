@@ -6,6 +6,7 @@ import { Provider } from "@ethersproject/providers";
 import { StakehoundConfig } from "./config";
 import { collectActions, fetchEvents } from "./events";
 import { StakehoundGeyser__factory } from "../typechain";
+import logger from "./logger";
 
 BigNumber.set({
     ROUNDING_MODE: BigNumber.ROUND_FLOOR,
@@ -675,7 +676,7 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
             let i = u.stakes.length - 1;
             while (toUnstake.gt(0)) {
                 if (i < 0) {
-                    console.error(
+                    logger.error(
                         "calc_stakes_unstake: more shares being unstaked than were registered staked"
                     );
                     break;

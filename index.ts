@@ -6,7 +6,7 @@ import S3 from "aws-sdk/clients/s3";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { Wallet, Signer, providers } from "ethers";
 import { fetchContext } from "./src/utils";
-import { init_logger } from "./src/logger";
+import logger, { init_logger } from "./src/logger";
 
 
 
@@ -47,7 +47,7 @@ const run_with_context = (
         .then((con) => func(con, con.signer))
         .then(() => process.exit(0))
         .catch((error) => {
-            console.error(error);
+            logger.error(error);
             process.exit(1);
         });
 };

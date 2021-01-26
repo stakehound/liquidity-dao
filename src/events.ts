@@ -5,6 +5,7 @@ import { ethers } from "ethers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
 import { StakehoundGeyser } from "../typechain";
 import { getAddress } from "ethers/lib/utils";
+import logger from "./logger";
 
 const giface = new ethers.utils.Interface(
     geyserAbi.abi
@@ -41,7 +42,7 @@ const fetchEvents = async (
                 : 0
         );
     } catch (e) {
-        console.error("failed fetching events", e);
+        logger.error("failed fetching events", e);
         return [];
     }
 };
@@ -69,7 +70,7 @@ const collectActions = (logs: Log[]) => {
                     : null;
             if (!type) {
                 if(!parsed.name.includes('Role')) {
-                    console.error(`parseEvent: unexpected event ${parsed.name}`);
+                    logger.error(`parseEvent: unexpected event ${parsed.name}`);
                 }
                 continue;
             }
@@ -102,7 +103,7 @@ const collectActions = (logs: Log[]) => {
                 total: new BigNumber(parsed.args.total.toString()),
             });
         } catch (e) {
-            console.error(`parseEvents: failed to parse event ${log} error:${e}`);
+            logger.error(`parseEvents: failed to parse event ${log} error:${e}`);
         }
     }
     for (let i = 0; i < acts.length; i++) {

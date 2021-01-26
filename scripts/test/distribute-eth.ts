@@ -1,6 +1,7 @@
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { get_signers } from "../lib/utils";
+import logger from "../../src/logger";
 
 const distribute_eth = async () => {
     const signers = await get_signers(process.env.MNEMONIC!, ethers.provider);
@@ -20,6 +21,6 @@ const distribute_eth = async () => {
 distribute_eth()
     .then(() => process.exit(0))
     .catch((error) => {
-        console.error(error);
+        logger.error(error);
         process.exit(1);
     });

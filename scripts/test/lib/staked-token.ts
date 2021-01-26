@@ -2,7 +2,7 @@ import _ from "lodash";
 import { ethers, upgrades } from "hardhat";
 import { StakedToken, StakedToken__factory, Multiplexer } from "../../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { BigNumber, Signer, PopulatedTransaction, logger } from "ethers";
+import { BigNumber, Signer, PopulatedTransaction } from "ethers";
 import { TokenReward } from "../../../src/calc_stakes";
 import { sharesToValue, valueToShares } from "../../../src/utils";
 import { TokensMap, GeysersMap } from "../../../src/types";
@@ -14,6 +14,7 @@ import {
 } from "../../lib/utils";
 import { getAddress } from "ethers/lib/utils";
 import { Provider } from "@ethersproject/providers";
+import logger from "../../../src/logger";
 
 export const tokenSymbols = ["SFIRO", "SETH", "SXEM"] as const;
 
@@ -101,11 +102,17 @@ const mint_and_stake = async (
             );
         })
     );
+    logger.info('signed minter')
     const signedMinter = await sign_transactions(minter, minterTxs);
+    logger.info('send minter')
     const txrsMinter = await send_transactions(minter.provider!, signedMinter);
+    logger.info('wait minter confirm')
     await wait_for_confirmed(txrsMinter, 1);
+    logger.info('minter confirmed, send signers')
     const txrsSigners = await send_transactions(minter.provider!, signedStakerTxs);
+    logger.info('send signers')
     await wait_for_confirmed(txrsSigners, 1);
+    logger.info('signers done')
 };
 
 const mint_and_signal = async (

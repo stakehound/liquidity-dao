@@ -12,7 +12,7 @@ import { get_signers, add_distribution_tokens } from "../../lib/utils";
 import { fetchConfig } from "../../../src/utils";
 import { writeFileSync } from "fs";
 import { confSchema } from "../../../src/validations";
-import { logger } from "ethers";
+import logger from '../../../src/logger'
 
 const credentials = {
     accessKeyId: process.env.AWS_ACCESS_KEYID!,

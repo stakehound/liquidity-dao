@@ -10,7 +10,7 @@ import {
 } from "../../typechain";
 import { TokensMap, GeysersMap } from "../../src/types";
 import { delay_parallel_effects } from "./utils";
-import { logger } from "ethers";
+import logger from "../../src/logger";
 
 const deploy_geysers = async (
     tokens: TokensMap,

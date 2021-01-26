@@ -2,7 +2,7 @@ import _ from "lodash";
 import { Awaited } from "ts-essentials";
 import { Multiplexer } from "../typechain";
 import { Provider, Block } from "@ethersproject/providers";
-import { Signer, logger } from "ethers";
+import { Signer }from "ethers";
 import {
     fetch_system_rewards,
     RewardsFixed,
@@ -16,6 +16,7 @@ import { upload_rewards, fetch_rewards } from "./s3";
 import MultiMerkle, { compare_merkle_rewards } from "./MultiMerkle";
 import { assert } from "ts-essentials";
 import { wait_for_block, wait_for_time, wait_for_next_proposed, sleep } from "./wait";
+import logger from "./logger";
 
 interface StakehoundContext {
     geysers: string[];
@@ -307,7 +308,7 @@ const run_propose = async (context: StakehoundContext, proposer: Signer) => {
                 await Promise.all([bumped.seven, bumped.thirty]);
             }
         } catch (e) {
-            console.error(`run_propose: ${e}`);
+            logger.error(`run_propose: ${e}`);
             await sleep(1000 * 60 * 10); // try again in ten minutes
         }
     }
@@ -328,7 +329,7 @@ const run_approve = async (context: StakehoundContext, approver: Signer) => {
                 await Promise.all([approved.seven, approved.thirty]);
             }
         } catch (e) {
-            console.error(`run_approve: ${e}`);
+            logger.error(`run_approve: ${e}`);
             await sleep(1000 * 60 * 10); // try again in ten minutes
         }
     }
@@ -350,7 +351,7 @@ const run_init = async (context: StakehoundContext, proposer: Signer) => {
                 await Promise.all([init.seven, init.thirty]);
             }
         } catch (e) {
-            console.error(`run_approve: ${e}`);
+            logger.error(`run_approve: ${e}`);
             await sleep(1000 * 60 * 10); // try again in ten minutes
         }
     }

@@ -1,5 +1,6 @@
 import S3 from "aws-sdk/clients/s3";
 import { MerkleRewards } from "./MultiMerkle";
+import logger from "./logger";
 
 const upload_rewards = (s3: S3, rewards: MerkleRewards) => {
     const data = JSON.stringify(rewards);
@@ -12,7 +13,7 @@ const upload_rewards = (s3: S3, rewards: MerkleRewards) => {
     return new Promise<void>((res, rej) =>
         s3.upload(req, function (err, data) {
             if (err) {
-                console.error("upload_rewards: Error", err);
+                logger.error("upload_rewards: Error", err);
                 rej();
             }
             if (data) {
@@ -31,12 +32,12 @@ const fetch_rewards = (s3: S3, merkleRoot: string) => {
     return new Promise<MerkleRewards>((res, rej) =>
         s3.getObject(req, function (err, data) {
             if (err) {
-                console.error("fetch_rewards: Error", err);
+                logger.error("fetch_rewards: Error", err);
                 rej();
             }
             if (data) {
                 if (!data.Body) {
-                    console.error("fetch_rewards: didn't get response body");
+                    logger.error("fetch_rewards: didn't get response body");
                     rej();
                     return;
                 }
