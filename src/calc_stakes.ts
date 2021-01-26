@@ -101,8 +101,6 @@ interface GeyserState {
     users: { [user: string]: UserState };
     totalRewards: TokenReward;
     totalRewardsInRange: TokenReward;
-    // totalDistributed: TokenReward;
-    // totalDistributedInRange: TokenReward;
     rewardTokens: string[];
     schedules: Schedules;
     absTime: number;
@@ -767,6 +765,7 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
             }
         }
     };
+    
     const process_share_seconds = (st: GeyserState, ts: number) => {
         const ds = create_ds(_.keys(st.users), st.rewardTokens);
         for (const u of _.values(st.users)) {

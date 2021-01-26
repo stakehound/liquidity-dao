@@ -15,7 +15,7 @@ import S3 from "aws-sdk/clients/s3";
 import { upload_rewards, fetch_rewards } from "./s3";
 import MultiMerkle, { compare_merkle_rewards } from "./MultiMerkle";
 import { assert } from "ts-essentials";
-import { wait_for_block, wait_for_time, wait_for_next_proposed, sleep } from "./wait";
+import { wait_for_time, wait_for_next_proposed, sleep } from "./wait";
 import logger from "./logger";
 
 interface StakehoundContext {
@@ -149,9 +149,18 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
             context.epoch;
     if (0 >= latestConfirmedEpoch - lastEnd.timestamp) {
         const waitTime = latestConfirmedEpoch + context.epoch;
-        logger.info(`bump_rewards: waiting until ${waitTime} to propose a reward`);
+        logger.info(
+            `bump_rewards: waiting until ${waitTime} (${
+                waitTime - Date.now() / 1000
+            } minutes) to propose a reward`
+        );
         end = await wait_for_time(provider, waitTime, context.rate);
     }
+    const newLastProposed = await multiplexer.lastProposedMerkleData();
+    assert(
+        newLastProposed.cycle === last.cycle,
+        `bump_rewards: expected lastProposed not current lastProposed`
+    );
     logger.info("playing events upon last system rewards");
     const newRewards = await play_system_rewards(
         r,
