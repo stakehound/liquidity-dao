@@ -5,7 +5,7 @@ import { assert } from "ts-essentials";
 import logger from "./logger";
 
 const sleep = (ms: number) =>
-    new Promise((res) => {
+    new Promise<void>((res) => {
         logger.info(`going to sleep for ${ms / 1000 / 60} minutes`);
         setTimeout(() => {
             logger.info(`waking up`);
