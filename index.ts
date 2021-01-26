@@ -50,7 +50,7 @@ const run_with_context = (
         .then((con) => {
             logger.info({
                 role: argv._[0],
-                epoch: `${con.epoch / 1000 / 60} minutes`
+                epoch: `${con.epoch / 60} minutes`
             })
             return func(con, con.signer);
         })
