@@ -176,11 +176,11 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
 
     // following is another pwn situation
     assert(
-        newLastProposed.cycle === last.cycle,
+        newLastProposed.cycle.eq(last.cycle),
         `bump_rewards: expected lastProposed to be same as lastProposed`
     );
     assert(
-        newLastProposed.cycle === newLastPublished.cycle,
+        newLastProposed.cycle.eq(newLastPublished.cycle),
         `bump_rewards: expected lastPublished to be same as lastProposed`
     );
 
