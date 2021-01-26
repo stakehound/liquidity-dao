@@ -1,5 +1,5 @@
 import { deploy_test_scenario } from "./lib/test-scenario";
-import logger, { init_logger } from "../../src/logger";
+import logger from "../../src/logger";
 
 init_logger(`deploy_logs_${new Date().toISOString()}.log`);
 

@@ -47,7 +47,6 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
         Math.floor((end.timestamp - startBlock.timestamp) / context.epoch) *
             context.epoch;
     // lower bound - to be precise would need more aggressive block fetching
-    logger.info("sad!", latestConfirmedEpoch - startBlock.timestamp);
     if (0 >= latestConfirmedEpoch - startBlock.timestamp) {
         end = await wait_for_time(provider, startBlock.timestamp, context.rate);
     }

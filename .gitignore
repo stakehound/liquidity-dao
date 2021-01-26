@@ -15,6 +15,7 @@ docs/
 contracts-temporary
 flatten
 flatten/
+dist/
 
 run-testnet.sh
 keeper.sh

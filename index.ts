@@ -6,7 +6,7 @@ import S3 from "aws-sdk/clients/s3";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { Wallet, Signer, providers } from "ethers";
 import { fetchContext } from "./src/utils";
-import logger, { init_logger } from "./src/logger";
+import logger from "./src/logger";
 
 
 
@@ -38,7 +38,6 @@ const argv = yargs(process.argv.slice(2))
     })
     .demandCommand(1).argv;
 
-init_logger(argv.logfile)
 
 const run_with_context = (
     func: (context: StakehoundContext, signer: Signer) => Promise<void>
