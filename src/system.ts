@@ -246,7 +246,7 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         "approve_rewards: multiple published in one epoch, are multiple approvers and proposers running?"
     );
     // could we turn this into its own waiter - i.e. keep going until no changes for 30 blocks
-    if (_.isEqual(proposedNow, publishedNow) || _.isEqual(proposed, proposedNow)) {
+    if (_.isEqual(proposedNow, publishedNow) || !_.isEqual(proposed, proposedNow)) {
         logger.info("approve_rewards: waiting for next proposal");
         const { lastPropose, publishNow, block } = await wait_for_next_proposed(
             provider,
