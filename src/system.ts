@@ -151,7 +151,8 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         const waitTime = latestConfirmedEpoch + context.epoch;
         logger.info(
             `bump_rewards: waiting until ${waitTime} (${
-                waitTime - Date.now() / 1000
+                // 30 * 12 for 30 blocks
+                waitTime - (Date.now() / 1000 - 30 * 12) / 60
             } minutes) to propose a reward`
         );
         end = await wait_for_time(provider, waitTime, context.rate);
