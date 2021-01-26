@@ -251,7 +251,7 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         const { lastPropose, publishNow, block } = await wait_for_next_proposed(
             provider,
             multiplexer,
-            proposedNow.endBlock.toNumber(),
+            proposed.endBlock.toNumber() + 1,
             published.cycle.toNumber(),
             context.rate
         );
