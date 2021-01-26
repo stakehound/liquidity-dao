@@ -37,7 +37,7 @@ interface StakehoundContext {
 //  Proposer
 
 const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
-    logger.info('init_rewards called')
+    logger.info("init_rewards called");
     context = { ...context, multiplexer: context.multiplexer.connect(proposer) };
     const { s3, provider, startBlock, multiplexer } = context;
     const last = await multiplexer.lastProposedMerkleData();
@@ -76,7 +76,7 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
     );
     await upload_rewards(s3, merkle.merkleRewards);
     logger.info(
-        `Init: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot} with tx ${tx.hash}`
+        `Init: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot}`
     );
     const tx = await multiplexer.proposeRoot(
         merkle.root,
@@ -84,6 +84,8 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
         merkle.cycle,
         end.number
     );
+
+    logger.info(`Init: got txhash ${tx.hash}`);
 
     const seven = tx.wait(7).then((tx) => {
         logger.info(
@@ -97,7 +99,7 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
 };
 
 const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
-    logger.info('bump_rewards called')
+    logger.info("bump_rewards called");
     context = { ...context, multiplexer: context.multiplexer.connect(proposer) };
     const { s3, provider, startBlock, multiplexer } = context;
     const last = await multiplexer.lastProposedMerkleData();
@@ -173,7 +175,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
     const merkle = MultiMerkle.fromRewards(newWithInit);
     await upload_rewards(s3, merkle.merkleRewards);
     logger.info(
-        `Bump: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot} with tx hash ${tx.hash}`
+        `Bump: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot}`
     );
     const tx = await multiplexer.proposeRoot(
         merkle.root,
@@ -181,6 +183,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         merkle.cycle,
         end.number
     );
+    logger.info(`Bump: got txHash ${tx.hash}`);
 
     const seven = tx.wait(7).then((tx) => {
         logger.info(
@@ -198,7 +201,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
 // Approver
 
 const approve_rewards = async (context: StakehoundContext, approver: Signer) => {
-    logger.info('approve_rewards called')
+    logger.info("approve_rewards called");
     context = { ...context, multiplexer: context.multiplexer.connect(approver) };
 
     const { s3, provider, startBlock, multiplexer } = context;
@@ -227,7 +230,7 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
     );
     // could we turn this into its own waiter - i.e. keep going until no changes for 30 blocks
     if (_.isEqual(proposed, published) || !_.isEqual(proposed, proposedNow)) {
-        logger.info('approve_rewards: waiting for next proposal')
+        logger.info("approve_rewards: waiting for next proposal");
         const { lastPropose, publishNow, block } = await wait_for_next_proposed(
             provider,
             multiplexer,
@@ -277,16 +280,16 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         "approve_rewards: fetched rewards did not match calculated"
     );
     logger.info(
-        `Approve: Approving cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.root} ${tx.hash}`
+        `Approve: Approving cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.root}`
     );
-    
+    // TODO: use populate tx to get tx hash fully before broadcasting
     const tx = await multiplexer.approveRoot(
         merkle.root,
         merkle.root,
         merkle.cycle,
         proposedEnd.number
     );
-
+    logger.info(`Approve: Got txhash ${tx.hash}`);
     const seven = tx.wait(7).then((txn) => {
         logger.info(
             `Approve: Mined into block ${txn.blockNumber} with hash ${txn.blockNumber} and 7 confirmations`
