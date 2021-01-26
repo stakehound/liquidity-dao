@@ -1,0 +1,14 @@
+{
+    "startBlock": "0x12",
+    "multiplexer": "0x94A2c5a08b7e3AcB71D6aB60fC61913Be0A5a1Aa",
+    "initDistributionPath": "./initDistribution.json",
+    "signer": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "geysers": [],
+    "credentials": {
+        "accessKeyId": "access",
+        "secretAccessKey": "secretaccess"
+    },
+    "epoch": 1800,
+    "providerUrl": "https://eth-ropsten.alchemyapi.io/v2/<api-key>",
+    "rate": 300000
+}

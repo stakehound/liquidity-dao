@@ -237,6 +237,18 @@ const rewards_to_fixed = (r: Rewards) => {
 type RewardsFixed = ReturnType<typeof rewards_to_fixed>;
 
 const get_rewards = (st: GeyserState, cycle: number): Rewards => {
+    // console.log(
+    //     "rewards",
+    //     _.values(st.users).map((u) =>
+    //         _.values(u.reward).map((u) => u.toFixed(0))
+    //     )
+    // );
+    // console.log(
+    //     "reward in range",
+    //     _.values(st.users).map((u) =>
+    //         _.values(u.rewardInRange).map((u) => u.toFixed(0))
+    //     )
+    // );
     const r: Rewards = {
         cycle,
         rewards: {},
@@ -442,27 +454,12 @@ const compare_token_rewards = (r: TokenReward[]) => {
             r[0][addr]
                 .minus(t[addr])
                 .abs()
-                .lt(pow10(r[0][addr].toFixed(0).length - 2))
+                .lt(pow10(r[0][addr].toFixed(0).length - 1))
         )
     );
 };
 
 const validate_rewards = (r: Rewards) => {
-    // console.log(
-    //     "validate_rewards:\n",
-    //     _.zip(_.values(r.rewards), _.values(r.rewardsDistributed)).map(([x, y]) => [
-    //         x!.toFixed(0),
-    //         y!.toFixed(0),
-    //     ]),
-    //     '\nvalidate_rewards range:\n',
-    //     _.zip(
-    //         _.values(r.rewardsInRange),
-    //         _.values(r.rewardsDistributedInRange)
-    //     ).map(([x, y]) => [x!.toFixed(0), y!.toFixed(0)]),
-    //     validate_distributed(r),
-    //     compare_token_rewards([r.rewardsDistributed, r.rewards]),
-    //     compare_token_rewards([r.rewardsDistributedInRange, r.rewardsInRange])
-    // );
     return (
         validate_distributed(r) &&
         compare_token_rewards([r.rewardsDistributed, r.rewards]) &&

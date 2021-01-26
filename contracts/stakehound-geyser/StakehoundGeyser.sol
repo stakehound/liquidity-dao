@@ -105,6 +105,14 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     }
 
     /**
+     * @return shares
+     */
+    function sharesFromValue(IStakedToken _stakedToken, uint256 value) internal view returns (uint256) {
+        uint256 sharesPerToken = _stakedToken.totalShares() / _stakedToken.totalSupply();
+        return value * sharesPerToken;
+    }
+
+    /**
      * @return The token users receive as they unstake.
      */
     function getDistributionTokens() public view returns (address[] memory) {
@@ -235,15 +243,10 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         address beneficiary,
         uint256 amount
     ) internal {
-        require(amount > 0, "StakehoundGeyser: stake amount is zero");
-        require(beneficiary != address(0), "StakehoundGeyser: beneficiary is zero address");
+        require(amount > 0, "BadgerGeyser: stake amount is zero");
+        require(beneficiary != address(0), "BadgerGeyser: beneficiary is zero address");
 
-        // TODO: re-entrancy guard if you launch with shady tokens
-        uint256 sharesBefore = _stakingToken.sharesOf(address(this));
-
-        IERC20Upgradeable(address(_stakingToken)).safeTransferFrom(staker, address(this), amount);
-        uint256 sharesAfter = _stakingToken.sharesOf(address(this));
-        uint256 shares = sharesAfter.sub(sharesBefore);
+        uint256 shares = sharesFromValue(_stakingToken, amount);
 
         // 1. User Accounting
         _userTotals[beneficiary] = _userTotals[beneficiary].add(shares);
@@ -251,7 +254,7 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         // 2. Global Accounting
         totalStaked = totalStaked.add(shares);
 
-        // require(totalStaked == sharesAfter);
+        IERC20Upgradeable(address(_stakingToken)).safeTransferFrom(staker, address(this), amount);
 
         emit Staked(beneficiary, shares, totalStakedFor(beneficiary), now);
     }
@@ -264,22 +267,17 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     function _unstakeFor(address user, uint256 amount) internal {
         // checks
         require(amount > 0, "StakehoundGeyser: unstake amount is zero");
-        require(totalStakedFor(user) >= amount, "StakehoundGeyser: unstake amount is greater than total user stakes");
-
-        uint256 sharesBefore = _stakingToken.sharesOf(address(this));
-
-        // interactions
-        IERC20Upgradeable(address(_stakingToken)).safeTransfer(user, amount);
-
-        uint256 sharesAfter = _stakingToken.sharesOf(address(this));
-
-        uint256 shares = sharesBefore.sub(sharesAfter);
+        uint256 shares = sharesFromValue(_stakingToken, amount);
+        require(totalStakedFor(user) >= shares, "StakehoundGeyser: unstake amount is greater than total user stakes");
 
         // 1. User Accounting
         _userTotals[user] = _userTotals[user].sub(shares);
 
         // 2. Global Accounting
         totalStaked = totalStaked.sub(shares);
+
+        // interactions
+        IERC20Upgradeable(address(_stakingToken)).safeTransfer(user, amount);
 
         emit Unstaked(user, shares, totalStakedFor(user), now);
     }

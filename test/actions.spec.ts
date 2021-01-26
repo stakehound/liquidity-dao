@@ -22,8 +22,8 @@ import {
     validate_distributed,
 } from "../src/calc_stakes";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { deploy_test_scenario, DeployTestScenarioContext } from "../scripts/test/lib/test-scenario";
-import { unstake_all } from "./utils/deploy-test";
+import { deploy_test_scenario, DeployTestContext } from "../scripts/test/lib/test-scenario";
+import { unstake_all, clear_all } from "./utils/deploy-test";
 
 const giface = new ethers.utils.Interface(
     geyserAbi.abi
@@ -34,13 +34,16 @@ use(solidity);
 
 describe("Action tests", function () {
     let signers: SignerWithAddress[];
-    let con: DeployTestScenarioContext;
+    let con: DeployTestContext;
     this.beforeAll(async function () {
         this.timeout(100000);
         signers = await ethers.getSigners();
     });
     this.beforeEach(async function () {
         this.timeout(100000);
+        await HRE.network.provider.request({
+            method: "evm_mine",
+        });
         con = await deploy_test_scenario();
     });
     it("clear schedules stops rewards from accumulating", async function () {
@@ -63,13 +66,7 @@ describe("Action tests", function () {
             params: [con.startBlock.timestamp + 60 * 60 * 24],
         });
 
-        await Promise.all(
-            _.values(con.geysers).map((g) =>
-                Promise.all(
-                    _.values(con.tokens).map((t) => g.clearSchedules(t.address))
-                )
-            )
-        );
+        await clear_all(con)
         const newEnd = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );

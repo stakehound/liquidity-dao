@@ -8,8 +8,9 @@ import {
     Multiplexer,
     Multiplexer__factory,
 } from "../../typechain";
-import { TokensMap, GeysersMap } from "./types";
-import { sequentialize } from "./utils";
+import { TokensMap, GeysersMap } from "../../src/types";
+import { delay_parallel_effects } from "./utils";
+import { logger } from "ethers";
 
 const deploy_geysers = async (
     tokens: TokensMap,
@@ -18,7 +19,7 @@ const deploy_geysers = async (
     locker: string
 ) => {
     let map: GeysersMap = {} as any;
-    await sequentialize(
+    await delay_parallel_effects(
         _.map(tokens, (contract) => () =>
             deploy_geyser(contract, startTime, admin, locker).then((g) => {
                 map[getAddress(g.address)] = g;
@@ -39,11 +40,11 @@ const deploy_geyser = async (
     )) as StakehoundGeyser__factory;
     const geyser = (await upgrades.deployProxy(
         Geyser,
-        [token.address, startTime, locker, admin],
+        [token.address, startTime, admin, locker],
         { unsafeAllowCustomTypes: true }
     )) as StakehoundGeyser;
     await geyser.deployed();
-    console.log(`${await token.name()}Geyser deployed to: `, geyser.address);
+    logger.info(`${await token.name()}Geyser deployed to: ${geyser.address}`);
     return geyser;
 };
 
@@ -61,7 +62,7 @@ const deploy_multiplexer = async (
         { unsafeAllowCustomTypes: true }
     )) as Multiplexer;
     await multiplexer.deployed();
-    console.log(`Multiplexer deployed to: `, multiplexer.address);
+    logger.info(`Multiplexer deployed to: ${multiplexer.address}`);
     return multiplexer;
 };
 

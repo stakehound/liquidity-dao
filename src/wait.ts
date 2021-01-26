@@ -1,7 +1,8 @@
 import _ from "lodash";
-import { Provider } from "@ethersproject/providers";
+import { Provider, Block } from "@ethersproject/providers";
 import { Multiplexer } from "../typechain/Multiplexer";
 import { assert } from "ts-essentials";
+import { logger } from "ethers";
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -30,26 +31,30 @@ const wait_for_time = async (provider: Provider, time: number, rate: number) => 
 const wait_for_next_proposed = async (
     provider: Provider,
     multiplexer: Multiplexer,
+    fromBlock: number,
     lastCycle: number,
     rate: number
 ) => {
-    const block = await provider.getBlock("latest");
+    let block = await provider.getBlock("latest");
+    if (block.number - fromBlock >= 30) {
+        await wait_for_block(provider, block.number, rate);
+    }
     const filter = {
         address: multiplexer.address,
-        fromBlock: block.number - 60,
+        fromBlock: fromBlock,
         topics: [multiplexer.interface.getEventTopic("RootProposed")],
     };
     let done = false;
     await sleep(rate);
-    const proposedBlocks: any[] = [];
+    const proposedBlocks: number[] = [];
     while (!done) {
         await sleep(rate);
         const bn = await provider.getBlockNumber();
         if (bn <= filter.fromBlock + 30) {
             continue;
         }
-        console.log(
-            `fetching logs for proposed hash events from blocks ${filter.fromBlock} to ${bn}`
+        logger.info(
+            `waiting for next proposal: fetching logs for proposed hash events from blocks ${filter.fromBlock} to ${bn}`
         );
         const logs = await provider.getLogs({ ...filter, toBlock: bn });
         for (const log of logs) {
@@ -62,7 +67,9 @@ const wait_for_next_proposed = async (
                     }
                 } else {
                     console.error(
-                        `wait_for_next_proposed: unexpected event ${JSON.stringify(log)} ${JSON.stringify(parsed)}`
+                        `wait_for_next_proposed: unexpected event ${JSON.stringify(
+                            log
+                        )} ${JSON.stringify(parsed)}`
                     );
                 }
             } catch (e) {
@@ -71,9 +78,9 @@ const wait_for_next_proposed = async (
                 );
             }
         }
-        filter.fromBlock = bn;
+        filter.fromBlock = bn + 1;
     }
-    const proposeBlock = _.last(proposedBlocks)!;
+    const proposeBlock = _.last(proposedBlocks)! + 1;
     const lastConfirmed = await multiplexer.lastProposedMerkleData({
         blockTag: proposeBlock,
     });
@@ -84,10 +91,10 @@ const wait_for_next_proposed = async (
     );
     const lastPublished = await multiplexer.lastPublishedMerkleData();
     assert(
-        !_.isEqual(last, lastPublished),
+        last.cycle > lastPublished.cycle,
         "wait_for_next_proposed: last published and last confirmed are the same - is approver running too aggressively, or are there two approvers?"
     );
-    return last;
+    return { publishNow: lastPublished, lastPropose: last, block: proposeBlock };
 };
 
 export { wait_for_block, wait_for_next_proposed, wait_for_time, sleep };

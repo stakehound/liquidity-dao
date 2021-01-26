@@ -81,19 +81,19 @@ const _abi = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
+        indexed: false,
         internalType: "uint256",
         name: "cycle",
         type: "uint256",
       },
       {
-        indexed: true,
+        indexed: false,
         internalType: "bytes32",
         name: "root",
         type: "bytes32",
       },
       {
-        indexed: true,
+        indexed: false,
         internalType: "bytes32",
         name: "contentHash",
         type: "bytes32",
@@ -101,13 +101,7 @@ const _abi = [
       {
         indexed: false,
         internalType: "uint256",
-        name: "timestamp",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "blockNumber",
+        name: "endBlock",
         type: "uint256",
       },
     ],
@@ -118,19 +112,19 @@ const _abi = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
+        indexed: false,
         internalType: "uint256",
         name: "cycle",
         type: "uint256",
       },
       {
-        indexed: true,
+        indexed: false,
         internalType: "bytes32",
         name: "root",
         type: "bytes32",
       },
       {
-        indexed: true,
+        indexed: false,
         internalType: "bytes32",
         name: "contentHash",
         type: "bytes32",
@@ -138,17 +132,11 @@ const _abi = [
       {
         indexed: false,
         internalType: "uint256",
-        name: "timestamp",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "blockNumber",
+        name: "endBlock",
         type: "uint256",
       },
     ],
-    name: "RootUpdated",
+    name: "RootValidated",
     type: "event",
   },
 ];

@@ -6,14 +6,12 @@ import _ from "lodash";
 import {
     StakehoundGeyser,
     Multiplexer,
-    MerkleMock__factory,
     StakedToken__factory,
     StakedToken,
 } from "../typechain";
 
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
 import stakedTokenAbi from "../src/abi/StakedToken.json";
-import { Interface, LogDescription, BytesLike } from "ethers/lib/utils";
 
 import {
     wait_for_next_proposed,
@@ -21,28 +19,27 @@ import {
     wait_for_time,
     sleep,
 } from "../src/wait";
-import MultiMerkle, { rewards_to_claims, encode_claim } from "../src/MultiMerkle";
+import MultiMerkle from "../src/MultiMerkle";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import S3 from "aws-sdk/clients/s3";
-import cids from "cids";
 import { fetch_rewards } from "../src/s3";
-import { approve_rewards, init_rewards, bump_rewards, Context } from "../src/system";
+import {
+    approve_rewards,
+    init_rewards,
+    bump_rewards,
+    StakehoundContext,
+} from "../src/system";
 import {
     deploy_test_scenario,
-    DeployTestScenarioContext,
+    DeployTestContext,
 } from "../scripts/test/lib/test-scenario";
+import { writeFileSync } from "fs";
 const giface = new ethers.utils.Interface(
     geyserAbi.abi
 ) as StakehoundGeyser["interface"];
 const siface = new ethers.utils.Interface(stakedTokenAbi) as StakedToken["interface"];
 
 use(solidity);
-
-const cid_from_hash = (hash: BytesLike) => {
-    const _hash = Buffer.from("1220" + hash.toString().slice(2), "hex");
-    const cid = new cids(1, "dag-pb", _hash);
-    return cid;
-};
 
 const credentials = {
     accessKeyId: process.env.AWS_ACCESS_KEYID!,
@@ -52,12 +49,15 @@ const credentials = {
 describe("Stakehound", function () {
     let signers: SignerWithAddress[];
     let multiplexer: Multiplexer;
-    let context: DeployTestScenarioContext;
+    let context: DeployTestContext;
     const s3 = new S3({
         credentials,
     });
     this.beforeAll(async function () {
         this.timeout(100000);
+        await HRE.network.provider.request({
+            method: "evm_mine",
+        });
         signers = await ethers.getSigners();
         context = await deploy_test_scenario();
         ({ multiplexer } = context);
@@ -75,8 +75,8 @@ describe("Stakehound", function () {
             });
         }
         const geysers = _.keys(context.geysers);
-        const proposeContext: Context = {
-            startBlock: startBlock.number,
+        const proposeContext: StakehoundContext = {
+            startBlock,
             multiplexer,
             initDistribution: {
                 cycle: 0,
@@ -94,9 +94,25 @@ describe("Stakehound", function () {
             provider: ethers.provider,
             rate: 1000,
         };
-       
-        await init_rewards(proposeContext, proposer);
-        await approve_rewards(proposeContext, approver);
+
+        writeFileSync("config.json", JSON.stringify(proposeContext));
+        const ip = init_rewards(proposeContext, proposer);
+        await sleep(1000);
+        const ap = approve_rewards(proposeContext, approver);
+        await sleep(1000);
+
+        await HRE.network.provider.request({
+            method: "evm_increaseTime",
+            params: [30],
+        });
+        for (let i = 0; i < 70; i++) {
+            await HRE.network.provider.request({
+                method: "evm_mine",
+            });
+        }
+        const i = await ip;
+        const a = await ap;
+        await Promise.all([a.tx.wait(1), i.tx.wait(1)]);
         const lastpub = await multiplexer.lastPublishedMerkleData();
         await HRE.network.provider.request({
             method: "evm_setNextBlockTimestamp",
@@ -107,38 +123,50 @@ describe("Stakehound", function () {
                 method: "evm_mine",
             });
         }
+        await Promise.all([a.thirty, i.thirty]);
         const waitP = wait_for_next_proposed(
             ethers.provider,
             multiplexer,
+            lastpub.endBlock.toNumber(),
             lastpub.cycle.toNumber(),
             1000
         );
-        const nextEndBlock = await ethers.provider.getBlock(
-            await ethers.provider.getBlockNumber()
-        );
-        const lastpubStart = await ethers.provider.getBlock(
-            lastpub.startBlock.toNumber()
-        );
-        const lastpubEnd = await ethers.provider.getBlock(lastpub.endBlock.toNumber());
-        await bump_rewards(
-            proposeContext,
-            proposer,
-            lastpub,
-            lastpubStart,
-            lastpubEnd,
-            nextEndBlock
-        );
+        const ar1 = approve_rewards(proposeContext, approver);
+        const bp = bump_rewards(proposeContext, proposer);
+        await HRE.network.provider.request({
+            method: "evm_increaseTime",
+            params: [30],
+        });
         for (let i = 0; i < 40; i++) {
             await HRE.network.provider.request({
                 method: "evm_mine",
             });
         }
-        expect((await waitP).cycle.toNumber()).to.eq(lastpub.cycle.toNumber() + 1);
-        await approve_rewards(proposeContext, approver);
+        const b = await bp;
+        for (let i = 0; i < 40; i++) {
+            await HRE.network.provider.request({
+                method: "evm_mine",
+            });
+        }
+        const a1 = await ar1;
+        await [a1.tx.wait(1), b.tx.wait(1)];
+        expect((await waitP).lastPropose.cycle.toNumber()).to.eq(
+            lastpub.cycle.toNumber() + 1
+        );
+        await HRE.network.provider.request({
+            method: "evm_increaseTime",
+            params: [30],
+        });
+        for (let i = 0; i < 80; i++) {
+            await HRE.network.provider.request({
+                method: "evm_mine",
+            });
+        }
+        await [a1.thirty, a.thirty, b.thirty, i.thirty];
         const last = await multiplexer.lastPublishedMerkleData();
         const rewards = await fetch_rewards(s3, last.root);
         const m = MultiMerkle.fromMerkleRewards(last.cycle.toNumber(), rewards);
-        const _s = signers[3];
+        const _s = signers[4];
         const caddress = _.keys(m.merkleRewards.claims).find((c) => c === _s.address)!;
         const c = m.merkleRewards.claims[caddress]!;
         const shares = await Promise.all(

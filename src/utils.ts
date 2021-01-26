@@ -1,39 +1,53 @@
 import _ from "lodash";
-import { BigNumber } from "ethers";
-import { TokensMap, GeysersMap } from "../scripts/lib/types";
-import { StakedToken } from "../typechain";
+import path from "path";
+import { BigNumber, Signer, Wallet } from "ethers";
+import { TokensMap, GeysersMap } from "./types";
+import { StakedToken, Multiplexer__factory } from "../typechain";
+import { StakehoundContext } from "./system";
+import {
+    confSchema,
+    distributionSchema,
+    DistrSchemaType,
+    ConfSchemaType,
+} from "./validations";
+import { readFileSync } from "fs";
+import { JsonRpcProvider } from "@ethersproject/providers";
+import S3 from "aws-sdk/clients/s3";
 
-const signal_token_locks = async (
-    tokens: TokensMap,
-    geysers: GeysersMap,
-    distr: { [geyser: string]: { [tokenAddress: string]: BigNumber } },
-    startTime: number,
-    durationSec: number
-) => {
-    await _.map(geysers, (geyser, geyserName) =>
-        Promise.all(
-            _.values(tokens).map((token, tokenName) =>
-                geyser.signalTokenLock(
-                    token.address,
-                    distr[geyserName][tokenName],
-                    durationSec,
-                    startTime
-                )
-            )
+const fetchConfig = (
+    configPath: string
+): { initDistribution: DistrSchemaType; conf: ConfSchemaType } => {
+    const conf = confSchema.parse(
+        JSON.parse(readFileSync(configPath).toString("utf8"))
+    );
+    const initDistribution = distributionSchema.parse(
+        JSON.parse(
+            readFileSync(
+                path.join(path.dirname(configPath), conf.initDistributionPath)
+            ).toString()
         )
     );
+    return { conf, initDistribution };
 };
 
-const add_distribution_tokens = async (geysers: GeysersMap, tokens: TokensMap) => {
-    await Promise.all(
-        _.map(geysers, (geyser) =>
-            Promise.all(
-                _.values(tokens).map((token) =>
-                    geyser.addDistributionToken(token.address)
-                )
-            )
-        )
-    );
+const fetchContext = async (configPath: string): Promise<StakehoundContext> => {
+    const { conf, initDistribution } = fetchConfig(configPath);
+    const provider = new JsonRpcProvider(conf.providerUrl);
+    const s3 = new S3({ credentials: conf.credentials });
+    const signer = new Wallet(conf.signer).connect(provider);
+    const multiplexer = Multiplexer__factory.connect(conf.multiplexer, signer);
+    return {
+        epoch: conf.epoch,
+        geysers: conf.geysers.sort(),
+        startBlock: await provider.getBlock(conf.startBlock),
+        initDistribution,
+        rate: conf.rate,
+        credentials: conf.credentials,
+        signer,
+        provider,
+        s3,
+        multiplexer,
+    };
 };
 
 const valueToShares = async (st: StakedToken, val: BigNumber) => {
@@ -50,4 +64,4 @@ const sharesToValue = async (st: StakedToken, shares: BigNumber) => {
     return shares.div(sharesPerToken);
 };
 
-export { signal_token_locks, add_distribution_tokens, valueToShares, sharesToValue };
+export { valueToShares, sharesToValue, fetchContext, fetchConfig };

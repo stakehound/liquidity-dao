@@ -27,7 +27,7 @@ interface MultiplexerInterface extends ethers.utils.Interface {
     "ROOT_PROPOSER_ROLE()": FunctionFragment;
     "ROOT_VALIDATOR_ROLE()": FunctionFragment;
     "UNPAUSER_ROLE()": FunctionFragment;
-    "approveRoot(bytes32,bytes32,uint256,uint256,uint256)": FunctionFragment;
+    "approveRoot(bytes32,bytes32,uint256,uint256)": FunctionFragment;
     "claim(address[],uint256[],uint256,bytes32[])": FunctionFragment;
     "claimed(address,address)": FunctionFragment;
     "encodeClaim(address[],uint256[],address,uint256)": FunctionFragment;
@@ -45,7 +45,7 @@ interface MultiplexerInterface extends ethers.utils.Interface {
     "lastPublishedMerkleData()": FunctionFragment;
     "pause()": FunctionFragment;
     "paused()": FunctionFragment;
-    "proposeRoot(bytes32,bytes32,uint256,uint256,uint256)": FunctionFragment;
+    "proposeRoot(bytes32,bytes32,uint256,uint256)": FunctionFragment;
     "renounceRole(bytes32,address)": FunctionFragment;
     "revokeRole(bytes32,address)": FunctionFragment;
     "totalClaimed(address)": FunctionFragment;
@@ -74,7 +74,7 @@ interface MultiplexerInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "approveRoot",
-    values: [BytesLike, BytesLike, BigNumberish, BigNumberish, BigNumberish]
+    values: [BytesLike, BytesLike, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "claim",
@@ -140,7 +140,7 @@ interface MultiplexerInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: "paused", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "proposeRoot",
-    values: [BytesLike, BytesLike, BigNumberish, BigNumberish, BigNumberish]
+    values: [BytesLike, BytesLike, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceRole",
@@ -249,9 +249,8 @@ interface MultiplexerInterface extends ethers.utils.Interface {
     "RoleAdminChanged(bytes32,bytes32,bytes32)": EventFragment;
     "RoleGranted(bytes32,address,address)": EventFragment;
     "RoleRevoked(bytes32,address,address)": EventFragment;
-    "RootProposed(uint256,bytes32,bytes32,uint256,uint256)": EventFragment;
-    "RootUpdated(uint256,bytes32,bytes32,uint256,uint256)": EventFragment;
-    "RootValidated(uint256,bytes32,bytes32,uint256,uint256)": EventFragment;
+    "RootProposed(uint256,bytes32,bytes32,uint256)": EventFragment;
+    "RootValidated(uint256,bytes32,bytes32,uint256)": EventFragment;
     "Unpaused(address)": EventFragment;
   };
 
@@ -262,7 +261,6 @@ interface MultiplexerInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: "RoleGranted"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RoleRevoked"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RootProposed"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "RootUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RootValidated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Unpaused"): EventFragment;
 }
@@ -305,16 +303,14 @@ export class Multiplexer extends Contract {
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "approveRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+    "approveRoot(bytes32,bytes32,uint256,uint256)"(
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
@@ -379,11 +375,10 @@ export class Multiplexer extends Contract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, string, BigNumber, BigNumber, BigNumber] & {
+        [string, string, BigNumber, BigNumber] & {
           root: string;
           contentHash: string;
           cycle: BigNumber;
-          startBlock: BigNumber;
           endBlock: BigNumber;
         }
       ]
@@ -393,11 +388,10 @@ export class Multiplexer extends Contract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, string, BigNumber, BigNumber, BigNumber] & {
+        [string, string, BigNumber, BigNumber] & {
           root: string;
           contentHash: string;
           cycle: BigNumber;
-          startBlock: BigNumber;
           endBlock: BigNumber;
         }
       ]
@@ -407,11 +401,10 @@ export class Multiplexer extends Contract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, string, BigNumber, BigNumber, BigNumber] & {
+        [string, string, BigNumber, BigNumber] & {
           root: string;
           contentHash: string;
           cycle: BigNumber;
-          startBlock: BigNumber;
           endBlock: BigNumber;
         }
       ]
@@ -421,11 +414,10 @@ export class Multiplexer extends Contract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [string, string, BigNumber, BigNumber, BigNumber] & {
+        [string, string, BigNumber, BigNumber] & {
           root: string;
           contentHash: string;
           cycle: BigNumber;
-          startBlock: BigNumber;
           endBlock: BigNumber;
         }
       ]
@@ -505,11 +497,10 @@ export class Multiplexer extends Contract {
     lastProposedMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -517,11 +508,10 @@ export class Multiplexer extends Contract {
     "lastProposedMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -529,11 +519,10 @@ export class Multiplexer extends Contract {
     lastPublishedMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -541,11 +530,10 @@ export class Multiplexer extends Contract {
     "lastPublishedMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -562,16 +550,14 @@ export class Multiplexer extends Contract {
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "proposeRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+    "proposeRoot(bytes32,bytes32,uint256,uint256)"(
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
@@ -636,16 +622,14 @@ export class Multiplexer extends Contract {
     root: BytesLike,
     contentHash: BytesLike,
     cycle: BigNumberish,
-    startBlock: BigNumberish,
     endBlock: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "approveRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+  "approveRoot(bytes32,bytes32,uint256,uint256)"(
     root: BytesLike,
     contentHash: BytesLike,
     cycle: BigNumberish,
-    startBlock: BigNumberish,
     endBlock: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
@@ -709,11 +693,10 @@ export class Multiplexer extends Contract {
   getCurrentMerkleData(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
-      startBlock: BigNumber;
       endBlock: BigNumber;
     }
   >;
@@ -721,11 +704,10 @@ export class Multiplexer extends Contract {
   "getCurrentMerkleData()"(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
-      startBlock: BigNumber;
       endBlock: BigNumber;
     }
   >;
@@ -733,11 +715,10 @@ export class Multiplexer extends Contract {
   getPendingMerkleData(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
-      startBlock: BigNumber;
       endBlock: BigNumber;
     }
   >;
@@ -745,11 +726,10 @@ export class Multiplexer extends Contract {
   "getPendingMerkleData()"(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
-      startBlock: BigNumber;
       endBlock: BigNumber;
     }
   >;
@@ -828,11 +808,10 @@ export class Multiplexer extends Contract {
   lastProposedMerkleData(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
-      startBlock: BigNumber;
       endBlock: BigNumber;
     }
   >;
@@ -840,11 +819,10 @@ export class Multiplexer extends Contract {
   "lastProposedMerkleData()"(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
-      startBlock: BigNumber;
       endBlock: BigNumber;
     }
   >;
@@ -852,11 +830,10 @@ export class Multiplexer extends Contract {
   lastPublishedMerkleData(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
-      startBlock: BigNumber;
       endBlock: BigNumber;
     }
   >;
@@ -864,11 +841,10 @@ export class Multiplexer extends Contract {
   "lastPublishedMerkleData()"(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, BigNumber, BigNumber, BigNumber] & {
+    [string, string, BigNumber, BigNumber] & {
       root: string;
       contentHash: string;
       cycle: BigNumber;
-      startBlock: BigNumber;
       endBlock: BigNumber;
     }
   >;
@@ -885,16 +861,14 @@ export class Multiplexer extends Contract {
     root: BytesLike,
     contentHash: BytesLike,
     cycle: BigNumberish,
-    startBlock: BigNumberish,
     endBlock: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "proposeRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+  "proposeRoot(bytes32,bytes32,uint256,uint256)"(
     root: BytesLike,
     contentHash: BytesLike,
     cycle: BigNumberish,
-    startBlock: BigNumberish,
     endBlock: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
@@ -959,16 +933,14 @@ export class Multiplexer extends Contract {
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    "approveRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+    "approveRoot(bytes32,bytes32,uint256,uint256)"(
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
@@ -1032,11 +1004,10 @@ export class Multiplexer extends Contract {
     getCurrentMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -1044,11 +1015,10 @@ export class Multiplexer extends Contract {
     "getCurrentMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -1056,11 +1026,10 @@ export class Multiplexer extends Contract {
     getPendingMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -1068,11 +1037,10 @@ export class Multiplexer extends Contract {
     "getPendingMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -1151,11 +1119,10 @@ export class Multiplexer extends Contract {
     lastProposedMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -1163,11 +1130,10 @@ export class Multiplexer extends Contract {
     "lastProposedMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -1175,11 +1141,10 @@ export class Multiplexer extends Contract {
     lastPublishedMerkleData(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -1187,11 +1152,10 @@ export class Multiplexer extends Contract {
     "lastPublishedMerkleData()"(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, BigNumber, BigNumber, BigNumber] & {
+      [string, string, BigNumber, BigNumber] & {
         root: string;
         contentHash: string;
         cycle: BigNumber;
-        startBlock: BigNumber;
         endBlock: BigNumber;
       }
     >;
@@ -1208,16 +1172,14 @@ export class Multiplexer extends Contract {
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    "proposeRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+    "proposeRoot(bytes32,bytes32,uint256,uint256)"(
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
@@ -1294,24 +1256,14 @@ export class Multiplexer extends Contract {
       cycle: null,
       root: null,
       contentHash: null,
-      timestamp: null,
-      blockNumber: null
-    ): EventFilter;
-
-    RootUpdated(
-      cycle: BigNumberish | null,
-      root: BytesLike | null,
-      contentHash: BytesLike | null,
-      timestamp: null,
-      blockNumber: null
+      endBlock: null
     ): EventFilter;
 
     RootValidated(
       cycle: null,
       root: null,
       contentHash: null,
-      timestamp: null,
-      blockNumber: null
+      endBlock: null
     ): EventFilter;
 
     Unpaused(account: null): EventFilter;
@@ -1342,16 +1294,14 @@ export class Multiplexer extends Contract {
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    "approveRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+    "approveRoot(bytes32,bytes32,uint256,uint256)"(
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
@@ -1514,16 +1464,14 @@ export class Multiplexer extends Contract {
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    "proposeRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+    "proposeRoot(bytes32,bytes32,uint256,uint256)"(
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
@@ -1601,16 +1549,14 @@ export class Multiplexer extends Contract {
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "approveRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+    "approveRoot(bytes32,bytes32,uint256,uint256)"(
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
@@ -1791,16 +1737,14 @@ export class Multiplexer extends Contract {
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "proposeRoot(bytes32,bytes32,uint256,uint256,uint256)"(
+    "proposeRoot(bytes32,bytes32,uint256,uint256)"(
       root: BytesLike,
       contentHash: BytesLike,
       cycle: BigNumberish,
-      startBlock: BigNumberish,
       endBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;

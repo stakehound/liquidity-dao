@@ -6,7 +6,6 @@ import MerkleTree from "./merkle";
 import { writeFileSync } from "fs";
 import { Rewards, rewards_to_fixed, RewardsFixed, pow10 } from "./calc_stakes";
 import { assert } from "ts-essentials";
-import { log_merkle_pair } from "../test/utils/test";
 const coder = new AbiCoder();
 
 interface Claim {

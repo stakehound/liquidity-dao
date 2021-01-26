@@ -14,14 +14,13 @@ import "interfaces/stakehound/IStakedToken.sol";
 contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMultiTokenMerkleDistributor, PausableUpgradeable {
     using SafeMathUpgradeable for uint256;
 
-    event RootProposed(uint256 cycle, bytes32 root, bytes32 contentHash, uint256 timestamp, uint256 blockNumber);
-    event RootValidated(uint256 cycle, bytes32 root, bytes32 contentHash, uint256 timestamp, uint256 blockNumber);
+    event RootProposed(uint256 cycle, bytes32 root, bytes32 contentHash, uint256 endBlock);
+    event RootValidated(uint256 cycle, bytes32 root, bytes32 contentHash, uint256 endBlock);
 
     struct MerkleData {
         bytes32 root;
         bytes32 contentHash;
         uint256 cycle;
-        uint256 startBlock;
         uint256 endBlock;
     }
 
@@ -143,15 +142,14 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
         bytes32 root,
         bytes32 contentHash,
         uint256 cycle,
-        uint256 startBlock,
         uint256 endBlock
     ) external whenNotPaused {
         _onlyRootProposer();
         require(cycle == lastPublishedMerkleData.cycle.add(1), "Incorrect cycle");
-        // require(block.number > endBlock && endBlock > lastProposedMerkleData.endBlock);
-        lastProposedMerkleData = MerkleData(root, contentHash, cycle, startBlock, endBlock);
+        require(block.number.sub(endBlock) >= 30 && endBlock > lastProposedMerkleData.endBlock);
+        lastProposedMerkleData = MerkleData(root, contentHash, cycle, endBlock);
 
-        emit RootProposed(cycle, root, contentHash, now, block.number);
+        emit RootProposed(cycle, root, contentHash, endBlock);
     }
 
     /// ===== Root Validator Restricted =====
@@ -161,7 +159,6 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
         bytes32 root,
         bytes32 contentHash,
         uint256 cycle,
-        uint256 startBlock,
         uint256 endBlock
     ) external whenNotPaused {
         _onlyRootValidator();
@@ -169,12 +166,11 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
         require(root == lastProposedMerkleData.root, "Incorrect root");
         require(contentHash == lastProposedMerkleData.contentHash, "Incorrect content hash");
         require(cycle == lastProposedMerkleData.cycle, "Incorrect cycle");
-        require(startBlock == lastProposedMerkleData.startBlock, "Incorrect cycle start block");
         require(endBlock == lastProposedMerkleData.endBlock, "Incorrect cycle end block");
 
-        lastPublishedMerkleData = MerkleData(root, contentHash, cycle, startBlock, endBlock);
+        lastPublishedMerkleData = MerkleData(root, contentHash, cycle, endBlock);
 
-        emit RootValidated(cycle, root, contentHash, now, block.number);
+        emit RootValidated(cycle, root, contentHash, endBlock);
     }
 
     /// ===== Guardian Restricted =====

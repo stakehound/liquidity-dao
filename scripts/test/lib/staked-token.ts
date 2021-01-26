@@ -2,12 +2,18 @@ import _ from "lodash";
 import { ethers, upgrades } from "hardhat";
 import { StakedToken, StakedToken__factory, Multiplexer } from "../../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { BigNumber } from "ethers";
+import { BigNumber, Signer, PopulatedTransaction, logger } from "ethers";
 import { TokenReward } from "../../../src/calc_stakes";
-import { signal_token_locks, sharesToValue, valueToShares } from "../../../src/utils";
-import { TokensMap, GeysersMap } from "../../lib/types";
-import { sequentialize } from "../../lib/utils";
+import { sharesToValue, valueToShares } from "../../../src/utils";
+import { TokensMap, GeysersMap } from "../../../src/types";
+import {
+    delay_parallel_effects,
+    sign_transactions,
+    send_transactions,
+    wait_for_confirmed,
+} from "../../lib/utils";
 import { getAddress } from "ethers/lib/utils";
+import { Provider } from "@ethersproject/providers";
 
 export const tokenSymbols = ["SFIRO", "SETH", "SXEM"] as const;
 
@@ -24,7 +30,7 @@ const stakedNames: { [t: string]: string } = {
 };
 
 const deploy_staked_tokens = async (): Promise<TokensMap> => {
-    const tokens = await sequentialize(
+    const tokens = await delay_parallel_effects(
         tokenSymbols.map((symbol) => () =>
             deploy_staked_token(stakedNames[symbol], symbol, stakedDecimals[symbol])
         )
@@ -48,6 +54,7 @@ const deploy_staked_token = async (
     const StakedToken = (await ethers.getContractFactory(
         "StakedToken"
     )) as StakedToken__factory;
+
     const stakedToken = (await upgrades.deployProxy(StakedToken, [
         tokenName,
         tokenSymbol,
@@ -57,60 +64,95 @@ const deploy_staked_token = async (
     ])) as StakedToken;
     await stakedToken.deployed();
 
-    console.log(`${tokenName} deployed to: `, stakedToken.address);
+    logger.info(`${tokenName} deployed to: ${stakedToken.address}`);
     return stakedToken;
 };
 
 const mint_and_stake = async (
+    minter: Signer,
     tokens: TokensMap,
     geysers: GeysersMap,
-    signers: SignerWithAddress[]
+    stakers: Signer[]
 ) => {
+    const minterTxs: PopulatedTransaction[] = [];
+    const signedStakerTxs: string[] = [];
     await Promise.all(
-        signers.map((signer) =>
-            Promise.all(
+        stakers.map(async (signer) => {
+            const stakerTxs: PopulatedTransaction[] = [];
+            await Promise.all(
                 _.map(geysers, async (geyser) => {
                     const stakedToken = tokens[await geyser.getStakingToken()];
                     const amt = BigNumber.from(10)
                         .pow(await stakedToken.decimals())
                         .mul(300);
-                    await stakedToken.mint(signer.address, amt);
-                    const _token = stakedToken.connect(signer);
-                    await _token.approve(geyser.address, amt);
-                    const _geyser = geyser.connect(signer);
-                    await (await _geyser.stake(amt, "0x")).wait(1);
+                    await stakedToken.populateTransaction
+                        .mint(await signer.getAddress(), amt)
+                        .then((tx) => minterTxs.push(tx));
+                    await Promise.all([
+                        stakedToken.populateTransaction.approve(geyser.address, amt),
+                        geyser.populateTransaction.stake(amt, "0x", {
+                            gasLimit: 200000,
+                        }),
+                    ]).then((txs) => stakerTxs.push(...txs));
                 })
-            )
-        )
+            );
+            await sign_transactions(signer, stakerTxs).then((stxs) =>
+                signedStakerTxs.push(...stxs)
+            );
+        })
     );
+    const signedMinter = await sign_transactions(minter, minterTxs);
+    const txrsMinter = await send_transactions(minter.provider!, signedMinter);
+    await wait_for_confirmed(txrsMinter, 1);
+    const txrsSigners = await send_transactions(minter.provider!, signedStakerTxs);
+    await wait_for_confirmed(txrsSigners, 1);
 };
 
 const mint_and_signal = async (
+    locker: Signer,
+    minter: Signer,
     tokens: TokensMap,
     multiplexer: Multiplexer,
     geysers: GeysersMap,
     startTime: number,
     durationSec: number
 ) => {
-    // await signal_token_locks(tokens, geysers, )))
     const toDistribute = BigNumber.from(100000);
     const toDistributePerGeyser = toDistribute.div(_.keys(geysers).length);
+    const lockerTxns: PopulatedTransaction[] = [];
+    const minterTxns: PopulatedTransaction[] = [];
     await Promise.all(
-        _.map(tokens, async (token, address) => {
-            const amt = BigNumber.from(10)
+        _.map(tokens, async (token) => {
+            const mintAmt = BigNumber.from(10)
+                .pow(await token.decimals())
+                .mul(toDistribute);
+            await token.populateTransaction
+                .mint(multiplexer.address, mintAmt)
+                .then((tx) => minterTxns.push(tx));
+
+            const stakeAmt = BigNumber.from(10)
                 .pow(await token.decimals())
                 .mul(toDistributePerGeyser);
-            _.map(geysers, async (geyser) => {
-                await geyser.signalTokenLock(
-                    token.address,
-                    await valueToShares(token, amt),
-                    durationSec,
-                    startTime
-                );
-                await token.mint(multiplexer.address, amt);
-            });
+            return Promise.all(
+                _.map(geysers, async (geyser) => {
+                    return geyser.populateTransaction
+                        .signalTokenLock(
+                            token.address,
+                            await valueToShares(token, stakeAmt),
+                            durationSec,
+                            startTime
+                        )
+                        .then((tx) => lockerTxns.push(tx));
+                })
+            );
         })
-    );
+    ).then((all) => _.flatten(all));
+    const lockerSigned = sign_transactions(locker, lockerTxns);
+    const minterSigned = sign_transactions(minter, minterTxns);
+    const txrsLocker = await send_transactions(minter.provider!, lockerSigned);
+    await wait_for_confirmed(txrsLocker);
+    const txrsminter = await send_transactions(minter.provider!, minterSigned);
+    await wait_for_confirmed(txrsminter);
 };
 
 export { mint_and_stake, deploy_staked_token, deploy_staked_tokens, mint_and_signal };

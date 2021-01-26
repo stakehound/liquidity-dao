@@ -1,4 +1,4 @@
-import { StakehoundGeyser, StakedToken } from "../../typechain";
+import { StakehoundGeyser, StakedToken } from "../typechain";
 
 type TokensMap = { [name: string]: StakedToken };
 

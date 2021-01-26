@@ -3,7 +3,8 @@ import { task, HardhatUserConfig } from "hardhat/config";
 import "@nomiclabs/hardhat-waffle";
 import "hardhat-typechain";
 import "@openzeppelin/hardhat-upgrades";
-
+import { init_logger } from "./src/logger";
+init_logger()
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (args, hre) => {
@@ -27,6 +28,7 @@ const config: HardhatUserConfig = {
     },
     networks: {
         hardhat: {
+            accounts: { mnemonic: process.env.MNEMONIC },
             forking: {
                 url: process.env.RPC_ARCHIVE_MAINNET!,
                 blockNumber: 11619237,
@@ -34,13 +36,16 @@ const config: HardhatUserConfig = {
         },
         ropsten: {
             accounts: { mnemonic: process.env.MNEMONIC },
-            url: "https://ropsten.infura.io/v3/77c3d733140f4c12a77699e24cb30c27",
+            url: "https://eth-ropsten.alchemyapi.io/v2/MnO3SuHlzuCydPWE1XhsYZM_pHZP8_ix",
         },
         rinkeby: {
             accounts: { mnemonic: process.env.MNEMONIC },
             url: "https://rinkeby.infura.io/v3/77c3d733140f4c12a77699e24cb30c27",
         },
     },
+    mocha: {
+        timeout: 60 * 5 * 100
+    }
 };
 
 export default config;

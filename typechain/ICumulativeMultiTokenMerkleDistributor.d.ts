@@ -22,14 +22,14 @@ interface ICumulativeMultiTokenMerkleDistributorInterface
   events: {
     "Claimed(address,address,uint256,uint256,uint256,uint256)": EventFragment;
     "InsufficientFundsForRoot(bytes32)": EventFragment;
-    "RootProposed(uint256,bytes32,bytes32,uint256,uint256)": EventFragment;
-    "RootUpdated(uint256,bytes32,bytes32,uint256,uint256)": EventFragment;
+    "RootProposed(uint256,bytes32,bytes32,uint256)": EventFragment;
+    "RootValidated(uint256,bytes32,bytes32,uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Claimed"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "InsufficientFundsForRoot"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RootProposed"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "RootUpdated"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "RootValidated"): EventFragment;
 }
 
 export class ICumulativeMultiTokenMerkleDistributor extends Contract {
@@ -62,19 +62,17 @@ export class ICumulativeMultiTokenMerkleDistributor extends Contract {
     InsufficientFundsForRoot(root: BytesLike | null): EventFilter;
 
     RootProposed(
-      cycle: BigNumberish | null,
-      root: BytesLike | null,
-      contentHash: BytesLike | null,
-      timestamp: null,
-      blockNumber: null
+      cycle: null,
+      root: null,
+      contentHash: null,
+      endBlock: null
     ): EventFilter;
 
-    RootUpdated(
-      cycle: BigNumberish | null,
-      root: BytesLike | null,
-      contentHash: BytesLike | null,
-      timestamp: null,
-      blockNumber: null
+    RootValidated(
+      cycle: null,
+      root: null,
+      contentHash: null,
+      endBlock: null
     ): EventFilter;
   };
 

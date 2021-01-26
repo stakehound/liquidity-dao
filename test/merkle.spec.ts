@@ -5,7 +5,6 @@ import { Signer } from "ethers";
 import { MerkleMock__factory, MerkleMock } from "../typechain";
 import Merkle from "../src/merkle";
 import { keccak256 } from "ethereumjs-util";
-import data from "../data.json";
 import MultiMerkle from "../src/MultiMerkle";
 use(solidity);
 
