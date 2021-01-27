@@ -155,11 +155,11 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         Math.floor((end.timestamp - startBlock.timestamp) / context.epoch) *
             context.epoch;
     if (0 >= latestConfirmedEpoch - lastEnd.timestamp) {
-        const waitTime = latestConfirmedEpoch + context.epoch;
+        // 30 * 12 for 30 blocks
+        const waitTime = latestConfirmedEpoch + context.epoch + 30 * 12;
         logger.info(
             `bump_rewards: waiting until ${waitTime} (${
-                // 30 * 12 for 30 blocks
-                waitTime - (Date.now() / 1000 - 30 * 12) / 60
+                (waitTime - Date.now() / 1000) / 60
             } minutes) to propose a reward`
         );
         end = await wait_for_time(provider, waitTime, context.rate);
@@ -269,8 +269,17 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         },
     });
     // could we turn this into its own waiter - i.e. keep going until no changes for 30 blocks
+    // similar to other 'pwn' cases where assertions *can* fail even if both roles are uncompromised
     if (_.isEqual(proposedNow, publishedNow) || !_.isEqual(proposed, proposedNow)) {
-        logger.info("approve_rewards: waiting for next proposal");
+        const waittime =
+            context.startBlock.timestamp +
+            context.epoch * proposedNow.cycle.toNumber() +
+            12 * 30;
+        logger.info(
+            `approve_rewards: waiting for next proposal, estimated time ${waittime} or ~${
+                (Date.now() - waittime) / 60
+            } minutes from now`
+        );
         const { lastPropose, publishNow, block } = await wait_for_next_proposed(
             provider,
             multiplexer,

@@ -140,9 +140,9 @@ const mint_and_signal = async (
             const stakeAmt = BigNumber.from(10)
                 .pow(await token.decimals())
                 .mul(toDistributePerGeyser);
-            return Promise.all(
+            await Promise.all(
                 _.map(geysers, async (geyser) => {
-                    return geyser.populateTransaction
+                    await geyser.populateTransaction
                         .signalTokenLock(
                             token.address,
                             await valueToShares(token, stakeAmt),
