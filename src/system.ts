@@ -223,9 +223,9 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         );
         return tx;
     });
-    const thirty = tx.wait(30).then((tx) => {
+    const thirty = tx.wait(30).then(() => {
         logger.info(`Bump: Reached thirty confirmations`);
-        return tx;
+        return tx.wait(31).then((tx) => tx);
     });
     return { seven, thirty, tx };
 };
@@ -356,9 +356,9 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         );
         return txn;
     });
-    const thirty = tx.wait(30).then((txn) => {
+    const thirty = tx.wait(30).then(() => {
         logger.info(`Approve: Reached thirty confirmations`);
-        return txn;
+        return tx.wait(31).then((txn) => txn);
     });
     return { tx, seven, thirty };
 };
