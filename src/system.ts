@@ -246,6 +246,7 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
     let proposed = await multiplexer.lastProposedMerkleData({
         blockTag: nowBlock.number - 30,
     });
+
     assert(
         _.isEqual(proposedNow, proposedNow) ||
             (await provider.getBlock(proposedNow.endBlock.toNumber())).timestamp -
@@ -270,16 +271,26 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
     });
     // could we turn this into its own waiter - i.e. keep going until no changes for 30 blocks
     // similar to other 'pwn' cases where assertions *can* fail even if both roles are uncompromised
-    if (_.isEqual(proposedNow, publishedNow) || !_.isEqual(proposed, proposedNow)) {
-        const waittime =
-            context.startBlock.timestamp +
-            context.epoch * proposedNow.cycle.toNumber() +
-            12 * 30;
-        logger.info(
-            `approve_rewards: waiting for next proposal, estimated time ${waittime} or ~${
-                (waittime - Date.now() / 100) / 60
-            } minutes from now`
-        );
+    const proposedNotEqual = !_.isEqual(proposed, proposedNow);
+    const bothNowEqual = _.isEqual(proposedNow, publishedNow);
+    const proposedNowBlock = await provider.getBlock(proposedNow.endBlock.toNumber());
+    if (bothNowEqual || proposedNotEqual) {
+        if (bothNowEqual) {
+            const waittime = proposedNowBlock.timestamp + context.epoch + 30 * 12;
+            logger.info(
+                `approve_rewards: waiting for next new proposal, estimated time ${waittime} or ~${
+                    (waittime - Date.now() / 1000) / 60
+                } minutes from now`
+            );
+        } else {
+            const waittime = proposedNowBlock.timestamp + 30 * 12;
+            logger.info(
+                `approve_rewards: waiting for current proposal tx to confirm for 30 blocks, estimated time ${waittime} or ~${
+                    (waittime - Date.now() / 1000) / 60
+                } minutes from now`
+            );
+        }
+
         const { lastPropose, publishNow, block } = await wait_for_next_proposed(
             provider,
             multiplexer,
@@ -290,11 +301,11 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         proposed = lastPropose;
         published = await multiplexer.lastPublishedMerkleData({ blockTag: block });
         publishedNow = publishNow;
-        assert(
-            !_.isEqual(proposed, published) || !_.isEqual(proposed, proposedNow),
-            "approve_rewards: pwned"
-        );
     }
+    assert(
+        !_.isEqual(proposed, published) || !_.isEqual(proposed, proposedNow),
+        "approve_rewards: pwned"
+    );
 
     assert(
         published.cycle.lt(proposed.cycle),
