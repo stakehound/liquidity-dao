@@ -277,7 +277,7 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
             12 * 30;
         logger.info(
             `approve_rewards: waiting for next proposal, estimated time ${waittime} or ~${
-                (Date.now() - waittime) / 60
+                (waittime - Date.now() / 100) / 60
             } minutes from now`
         );
         const { lastPropose, publishNow, block } = await wait_for_next_proposed(
