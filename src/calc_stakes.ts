@@ -680,6 +680,13 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
                     );
                     logger.error(`calc_stakes_unstake: unstake`, unstake);
                     logger.error(`calc_stakes_unstake: user stakes`, debug);
+                    console.log(
+                        `calc_stakes_unstake: user stakes ${JSON.stringify(
+                            debug,
+                            null,
+                            2
+                        )}`
+                    );
                     break;
                 }
                 const stake = u.stakes[i];
