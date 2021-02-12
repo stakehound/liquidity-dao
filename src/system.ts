@@ -102,7 +102,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
     logger.info("bump_rewards called");
     context = { ...context, multiplexer: context.multiplexer.connect(proposer) };
     const { s3, provider, startBlock, multiplexer } = context;
-    const lastConfirmedBlock = await provider.getBlock(
+    let lastConfirmedBlock = await provider.getBlock(
         (await provider.getBlockNumber()) - 30
     );
     const lastPub = await multiplexer.lastPublishedMerkleData({
@@ -115,6 +115,31 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
     const fetchedLastRewards = await fetch_rewards(s3, last.root);
     const newLastProposed = await multiplexer.lastProposedMerkleData();
     const newLastPublished = await multiplexer.lastPublishedMerkleData();
+    logger.info({
+        bump: {
+            propnow: newLastProposed.cycle.toNumber(),
+            pubnow: newLastPublished.cycle.toNumber(),
+            prop: last.cycle.toNumber(),
+            pub: lastPub.cycle.toNumber(),
+        },
+    });
+
+    const latestConfirmedEpoch =
+        startBlock.timestamp +
+        Math.floor((lastConfirmedBlock.timestamp - startBlock.timestamp) / context.epoch) *
+            context.epoch;
+    if (0 >= latestConfirmedEpoch - lastEnd.timestamp) {
+        // 30 * 12 for 30 blocks
+        const waitTime = latestConfirmedEpoch + context.epoch + 30 * 12;
+        logger.info(
+            `bump_rewards: waiting until ${waitTime} (${
+                (waitTime - Date.now() / 1000) / 60
+            } minutes) to propose a reward`
+        );
+        lastConfirmedBlock = await wait_for_time(provider, waitTime, context.rate);
+    }
+
+
     assert(
         last.root === fetchedLastRewards.merkleRoot,
         "bump_rewards: last published start block does not match last start block"
@@ -148,31 +173,6 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         "bump_rewards: fetched last rewards and calculated last rewards failed to match"
     );
 
-    let end = await provider.getBlock((await provider.getBlockNumber()) - 30);
-
-    const latestConfirmedEpoch =
-        startBlock.timestamp +
-        Math.floor((end.timestamp - startBlock.timestamp) / context.epoch) *
-            context.epoch;
-    if (0 >= latestConfirmedEpoch - lastEnd.timestamp) {
-        // 30 * 12 for 30 blocks
-        const waitTime = latestConfirmedEpoch + context.epoch + 30 * 12;
-        logger.info(
-            `bump_rewards: waiting until ${waitTime} (${
-                (waitTime - Date.now() / 1000) / 60
-            } minutes) to propose a reward`
-        );
-        end = await wait_for_time(provider, waitTime, context.rate);
-    }
-
-    logger.info({
-        bump: {
-            propnow: newLastProposed.cycle.toNumber(),
-            pubnow: newLastPublished.cycle.toNumber(),
-            prop: last.cycle.toNumber(),
-            pub: lastPub.cycle.toNumber(),
-        },
-    });
 
     // following is another pwn situation
     assert(
@@ -190,9 +190,9 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         provider,
         context.geysers,
         startBlock.number,
-        end.number,
+        lastConfirmedBlock.number,
         lastEnd.timestamp,
-        end.timestamp
+        lastConfirmedBlock.timestamp
     );
 
     const newWithInit = sum_rewards([
@@ -213,7 +213,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         merkle.root,
         merkle.root,
         merkle.cycle,
-        end.number
+        lastConfirmedBlock.number
     );
     logger.info(`Bump: got txHash ${tx.hash}`);
 

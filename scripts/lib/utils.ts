@@ -1,4 +1,4 @@
-import _ from 'lodash'
+import _ from "lodash";
 import { sleep } from "../../src/wait";
 import { PopulatedTransaction, Signer, Wallet, BigNumber } from "ethers";
 import { Awaited, AsyncOrSync } from "ts-essentials";
@@ -8,7 +8,7 @@ import * as bip39 from "bip39";
 import { TokensMap, GeysersMap } from "../../src/types";
 
 const delay_parallel_effects = <T>(funcs: (() => Promise<T>)[]) => {
-    return Promise.all(funcs.map((f, i) => sleep(i * 50).then(f)));
+    return Promise.all(funcs.map((f, i) => sleep(i * 100).then(f)));
 };
 
 const sign_transactions = async (
@@ -22,20 +22,19 @@ const sign_transactions = async (
     const address = await signer.getAddress();
     const _txs = await Promise.all(txs).then((txs) =>
         Promise.all(
-            txs
-                .map((tx, i) => ({ ...tx, from: address, nonce: nonce! + i }))
-                .map(
-                    async (tx): Promise<PopulatedTransaction> => ({
-                        ...tx,
-                        gasLimit: tx.gasLimit || (await signer.estimateGas(tx)),
-                        gasPrice: tx.gasPrice || (await signer.getGasPrice()),
-                        chainId: tx.chainId || (await signer.getChainId()),
-                    })
-                )
+            txs.map(
+                async (tx, i): Promise<PopulatedTransaction> => ({
+                    ...tx,
+                    from: address,
+                    nonce: nonce! + i,
+                    gasLimit: tx.gasLimit || (await signer.estimateGas(tx)),
+                    gasPrice: tx.gasPrice || (await signer.getGasPrice()),
+                    chainId: tx.chainId || (await signer.getChainId()),
+                })
+            )
         )
     );
-    const out = await Promise.all(_txs.map((tx) => signer.signTransaction(tx)));
-    return out;
+    return Promise.all(_txs.map((tx) => signer.signTransaction(tx)));
 };
 
 const send_transactions = async (provider: Provider, txs: AsyncOrSync<string[]>) => {
@@ -47,7 +46,7 @@ const wait_for_confirmed = async (
     txrs: Awaited<ReturnType<typeof send_transactions>>,
     confirmations: number = 1
 ) => {
-    return Promise.all(txrs.map((txr) => txr.wait(confirmations)));
+    return _.last(txrs)!.wait(confirmations);
 };
 
 const get_signers = async (mnemonic: string, provider: Provider) => {
@@ -69,13 +68,13 @@ const sequentialize = <T>(funcs: (() => Promise<T>)[]) => {
             f().then((out) => {
                 if (acc) {
                     acc.push(out);
-                    return acc
+                    return acc;
                 }
                 return [out];
             })
         );
     }
-    return p.then(out => out || []);
+    return p.then((out) => out || []);
 };
 
 const signal_token_locks = async (

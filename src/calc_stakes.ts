@@ -670,12 +670,16 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
             process_share_seconds(st, unstake.timestamp);
             st.lastUpdate = unstake.timestamp;
             let toUnstake = unstake.shares;
+            const debug = _.cloneDeep(st.users[user]);
             const u = st.users[user];
             let i = u.stakes.length - 1;
             while (toUnstake.gt(0)) {
                 if (i < 0) {
                     logger.error(
                         "calc_stakes_unstake: more shares being unstaked than were registered staked"
+                    );
+                    logger.error(
+                        `calc_stakes_unstake: ${JSON.stringify(debug, null, 2)}`
                     );
                     break;
                 }
@@ -765,7 +769,7 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
             }
         }
     };
-    
+
     const process_share_seconds = (st: GeyserState, ts: number) => {
         const ds = create_ds(_.keys(st.users), st.rewardTokens);
         for (const u of _.values(st.users)) {

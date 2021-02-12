@@ -1,7 +1,13 @@
-import { StakehoundGeyser, StakedToken } from "../typechain";
+import { StakehoundGeyser, StakedToken, IERC20, IERC20Detailed } from "../typechain";
 
-type TokensMap = { [name: string]: StakedToken };
+type StakedTokensMap = { [name: string]: StakedToken };
+
+type TokensMap = { [name: string]: IERC20Detailed };
 
 type GeysersMap = { [name: string]: StakehoundGeyser };
 
-export { TokensMap, GeysersMap };
+type TokenPair = [string, string];
+
+type TokenPairs = TokenPair[];
+
+export { StakedTokensMap, GeysersMap, TokensMap, TokenPair, TokenPairs };

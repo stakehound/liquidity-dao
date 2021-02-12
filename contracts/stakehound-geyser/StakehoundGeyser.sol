@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/EnumerableSetUpgradeable.sol";
-import "interfaces/stakehound/IStakedToken.sol";
 
 /**
  * @title Stakehound Geyser
@@ -36,7 +35,7 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
 
     uint256 public totalStaked;
 
-    IStakedToken internal _stakingToken;
+    IERC20Upgradeable internal _stakingToken;
     EnumerableSetUpgradeable.AddressSet distributionTokens;
 
     mapping(address => uint256) internal _userTotals;
@@ -59,7 +58,7 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
      * @param globalStartTime_ Timestamp after which unlock schedules and staking can begin.
      */
     function initialize(
-        IStakedToken stakingToken_,
+        IERC20Upgradeable stakingToken_,
         uint256 globalStartTime_,
         address initialAdmin_,
         address initialTokenLocker_
@@ -72,6 +71,8 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         _stakingToken = stakingToken_;
 
         globalStartTime = globalStartTime_;
+        // needs to be commented for tests
+        // emit Staked(address(0), 1, 1, globalStartTime_);
     }
 
     /// ===== Modifiers =====
@@ -100,16 +101,8 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     /**
      * @return The token users deposit as stake.
      */
-    function getStakingToken() public view returns (IStakedToken) {
+    function getStakingToken() public view returns (IERC20Upgradeable) {
         return _stakingToken;
-    }
-
-    /**
-     * @return shares
-     */
-    function sharesFromValue(IStakedToken _stakedToken, uint256 value) internal view returns (uint256) {
-        uint256 sharesPerToken = _stakedToken.totalShares() / _stakedToken.totalSupply();
-        return value * sharesPerToken;
     }
 
     /**
@@ -246,17 +239,15 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         require(amount > 0, "BadgerGeyser: stake amount is zero");
         require(beneficiary != address(0), "BadgerGeyser: beneficiary is zero address");
 
-        uint256 shares = sharesFromValue(_stakingToken, amount);
-
         // 1. User Accounting
-        _userTotals[beneficiary] = _userTotals[beneficiary].add(shares);
+        _userTotals[beneficiary] = _userTotals[beneficiary].add(amount);
 
         // 2. Global Accounting
-        totalStaked = totalStaked.add(shares);
+        totalStaked = totalStaked.add(amount);
 
         IERC20Upgradeable(address(_stakingToken)).safeTransferFrom(staker, address(this), amount);
 
-        emit Staked(beneficiary, shares, totalStakedFor(beneficiary), now);
+        emit Staked(beneficiary, amount, totalStakedFor(beneficiary), now);
     }
 
     /**
@@ -267,19 +258,18 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     function _unstakeFor(address user, uint256 amount) internal {
         // checks
         require(amount > 0, "StakehoundGeyser: unstake amount is zero");
-        uint256 shares = sharesFromValue(_stakingToken, amount);
-        require(totalStakedFor(user) >= shares, "StakehoundGeyser: unstake amount is greater than total user stakes");
+        require(totalStakedFor(user) >= amount, "StakehoundGeyser: unstake amount is greater than total user stakes");
 
         // 1. User Accounting
-        _userTotals[user] = _userTotals[user].sub(shares);
+        _userTotals[user] = _userTotals[user].sub(amount);
 
         // 2. Global Accounting
-        totalStaked = totalStaked.sub(shares);
+        totalStaked = totalStaked.sub(amount);
 
         // interactions
         IERC20Upgradeable(address(_stakingToken)).safeTransfer(user, amount);
 
-        emit Unstaked(user, shares, totalStakedFor(user), now);
+        emit Unstaked(user, amount, totalStakedFor(user), now);
     }
 
     function _signalTokenLock(

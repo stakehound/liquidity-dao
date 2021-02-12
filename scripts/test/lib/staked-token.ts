@@ -1,11 +1,19 @@
 import _ from "lodash";
+import assert from "assert";
 import { ethers, upgrades } from "hardhat";
-import { StakedToken, StakedToken__factory, Multiplexer } from "../../../typechain";
+import {
+    StakedToken,
+    StakedToken__factory,
+    Multiplexer,
+    IERC20__factory,
+    IERC20Detailed__factory,
+    StakehoundGeyser,
+} from "../../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { BigNumber, Signer, PopulatedTransaction } from "ethers";
+import { BigNumber, Signer, PopulatedTransaction, BigNumberish } from "ethers";
 import { TokenReward } from "../../../src/calc_stakes";
-import { sharesToValue, valueToShares } from "../../../src/utils";
-import { TokensMap, GeysersMap } from "../../../src/types";
+import { sharesToValue, valueToShares, get_pair } from "../../../src/utils";
+import { StakedTokensMap, GeysersMap, TokensMap, TokenPairs } from "../../../src/types";
 import {
     delay_parallel_effects,
     sign_transactions,
@@ -15,34 +23,48 @@ import {
 import { getAddress } from "ethers/lib/utils";
 import { Provider } from "@ethersproject/providers";
 import logger from "../../../src/logger";
+import {
+    IUniswapV2Router02__factory,
+    IUniswapV2Pair__factory,
+} from "../../../src/contract-types";
 
-export const tokenSymbols = ["SFIRO", "SETH", "SXEM"] as const;
+const uniRouterAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
+const uniFactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
+
+export const tokenSymbols = ["stFIRO", "stETH", "stXEM"] as const;
+
+const MAX_NUMBER = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
+const ETH_ADDRESS = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+
+const uniRouter = IUniswapV2Router02__factory.connect(
+    uniRouterAddress,
+    ethers.provider
+);
 
 const stakedDecimals: { [t: string]: number } = {
-    SFIRO: 8,
-    SETH: 18,
-    SXEM: 8,
+    stFIRO: 8,
+    stETH: 18,
+    stXEM: 8,
 };
 
 const stakedNames: { [t: string]: string } = {
-    SFIRO: "StakedFiro",
-    SETH: "StakedETH",
-    SXEM: "StakedXEM",
+    stFIRO: "StakedFiro",
+    stETH: "StakedETH",
+    stXEM: "StakedXEM",
 };
 
-const deploy_staked_tokens = async (): Promise<TokensMap> => {
-    const tokens = await delay_parallel_effects(
-        tokenSymbols.map((symbol) => () =>
-            deploy_staked_token(stakedNames[symbol], symbol, stakedDecimals[symbol])
-        )
-    );
-    return _.transform(
-        tokens,
-        (acc: TokensMap, val) => (acc[getAddress(val.address)] = val),
-        {}
-    );
-};
+const MINIMUM_LIQUIDITY = BigNumber.from(10 ** 3);
 
+const deploy_staked_tokens = async (): Promise<StakedTokensMap> => {
+    const tokens: StakedTokensMap = {};
+    for (const sym of tokenSymbols) {
+        await deploy_staked_token(stakedNames[sym], sym, stakedDecimals[sym]).then(
+            (t) => (tokens[getAddress(t.address)] = t)
+        );
+    }
+    return tokens;
+};
 const deploy_staked_token = async (
     tokenName: string,
     tokenSymbol: string,
@@ -69,56 +91,191 @@ const deploy_staked_token = async (
     return stakedToken;
 };
 
-const mint_and_stake = async (
+const build_add_liquidity = async (
+    signer: Signer,
+    tokenA: string,
+    tokenB: string,
+    amtA: BigNumberish,
+    amtB: BigNumberish
+): Promise<PopulatedTransaction[]> => {
+    tokenA = tokenA.toLowerCase();
+    tokenB = tokenB.toLowerCase();
+    assert(tokenA !== tokenB, "add_liquidity: tokens are the same");
+    let token0: string;
+    let token1: string;
+    let amt0: BigNumber;
+    let amt1: BigNumber;
+    if (tokenA < tokenB) {
+        token0 = tokenA;
+        token1 = tokenB;
+        amt0 = BigNumber.from(amtA);
+        amt1 = BigNumber.from(amtB);
+    } else {
+        token0 = tokenB;
+        token1 = tokenA;
+        amt0 = BigNumber.from(amtB);
+        amt1 = BigNumber.from(amtA);
+    }
+    let txs: PopulatedTransaction[] = [];
+    const useEth = token0 === ETH_ADDRESS ? 0 : token1 === ETH_ADDRESS ? 1 : -1;
+    const minAmt0 = amt0.sub(BigNumber.from(10).pow(amt0.toString().length - 2));
+    const minAmt1 = amt1.sub(BigNumber.from(10).pow(amt1.toString().length - 2));
+    const deadline = await signer
+        .provider!.getBlock("latest")
+        .then((block) => block.timestamp + 1000);
+    if (-1 < useEth) {
+        const token = useEth === 0 ? token1 : token0;
+        const tokenAmt = useEth === 0 ? amt1 : amt0;
+        const minTokenAmt = useEth === 0 ? minAmt1 : minAmt0;
+        const ethAmt = useEth === 0 ? amt0 : amt1;
+        const minEthAmt = useEth === 0 ? minAmt0 : minAmt1;
+
+        return Promise.all([
+            IERC20__factory.connect(
+                token,
+                signer.provider!
+            ).populateTransaction.approve(uniRouter.address, MAX_NUMBER),
+            uniRouter.populateTransaction.addLiquidityETH(
+                token,
+                tokenAmt,
+                minTokenAmt,
+                minEthAmt,
+                await signer.getAddress(),
+                deadline,
+                { value: ethAmt, gasLimit: 500000 }
+            ),
+        ]);
+    } else {
+        return Promise.all([
+            IERC20__factory.connect(
+                token0,
+                signer.provider!
+            ).populateTransaction.approve(uniRouter.address, amt0),
+            IERC20__factory.connect(
+                token1,
+                signer.provider!
+            ).populateTransaction.approve(uniRouter.address, amt1),
+            uniRouter.populateTransaction.addLiquidity(
+                token0,
+                token1,
+                amt0,
+                amt1,
+                minAmt0,
+                minAmt1,
+                await signer.getAddress(),
+                deadline
+            ),
+        ]);
+    }
+};
+
+const build_stake = async (
+    staker: Signer,
+    geyser: StakehoundGeyser
+): Promise<PopulatedTransaction[]> => {
+    const token = IERC20__factory.connect(
+        await geyser.getStakingToken(),
+        staker.provider!
+    );
+
+    const amt = await token.balanceOf(await staker.getAddress());
+    return Promise.all([
+        token.populateTransaction.approve(geyser.address, amt),
+        geyser.populateTransaction.stake(amt, "0x", {
+            gasLimit: 200000,
+        }),
+    ]);
+};
+
+const mint_to_stakers = async (
     minter: Signer,
-    tokens: TokensMap,
-    geysers: GeysersMap,
+    tokens: StakedTokensMap,
     stakers: Signer[]
 ) => {
-    const minterTxs: PopulatedTransaction[] = [];
-    const signedStakerTxs: string[] = [];
+    const txs: PopulatedTransaction[] = [];
     await Promise.all(
-        stakers.map(async (signer) => {
-            const stakerTxs: PopulatedTransaction[] = [];
-            await Promise.all(
-                _.map(geysers, async (geyser) => {
-                    const stakedToken = tokens[await geyser.getStakingToken()];
-                    const amt = BigNumber.from(10)
-                        .pow(await stakedToken.decimals())
-                        .mul(300);
-                    await stakedToken.populateTransaction
-                        .mint(await signer.getAddress(), amt)
-                        .then((tx) => minterTxs.push(tx));
-                    await Promise.all([
-                        stakedToken.populateTransaction.approve(geyser.address, amt),
-                        geyser.populateTransaction.stake(amt, "0x", {
-                            gasLimit: 200000,
-                        }),
-                    ]).then((txs) => stakerTxs.push(...txs));
-                })
-            );
-            await sign_transactions(signer, stakerTxs).then((stxs) =>
-                signedStakerTxs.push(...stxs)
-            );
-        })
+        stakers.map((staker) =>
+            Promise.all(
+                _.map(tokens, async (token) =>
+                    token.populateTransaction.mint(
+                        await staker.getAddress(),
+                        BigNumber.from(10)
+                            .pow(await token.decimals())
+                            .mul(1000)
+                    )
+                )
+            ).then((_txs) => txs.push(..._txs))
+        )
     );
-    logger.info('signed minter')
-    const signedMinter = await sign_transactions(minter, minterTxs);
-    logger.info('send minter')
-    const txrsMinter = await send_transactions(minter.provider!, signedMinter);
-    logger.info('wait minter confirm')
-    await wait_for_confirmed(txrsMinter, 1);
-    logger.info('minter confirmed, send signers')
-    const txrsSigners = await send_transactions(minter.provider!, signedStakerTxs);
-    logger.info('send signers')
-    await wait_for_confirmed(txrsSigners, 1);
-    logger.info('signers done')
+    const signed = await sign_transactions(minter, txs);
+    const txrs = await send_transactions(minter.provider!, signed);
+    await wait_for_confirmed(txrs, 1);
+};
+
+const add_lp_and_stake = async (stakers: Signer[], geysers: GeysersMap) => {
+    const weth = await uniRouter.WETH().then((w) => w.toLowerCase());
+    logger.info("adding lp");
+    await Promise.all(
+        stakers.map(async (staker) =>
+            Promise.all(
+                _.map(geysers, async (geyser) => {
+                    const lpToken = await geyser
+                        .getStakingToken()
+                        .then((t) =>
+                            IUniswapV2Pair__factory.connect(t, staker.provider!)
+                        );
+                    const [t0, t1] = await Promise.all([
+                        lpToken.token0(),
+                        lpToken.token1(),
+                    ]).then((ts) =>
+                        ts.map((t) =>
+                            t.toLowerCase() === weth ? ETH_ADDRESS : t.toLowerCase()
+                        )
+                    );
+                    const amt0 =
+                        t0 === ETH_ADDRESS
+                            ? BigNumber.from(10).pow(10)
+                            : BigNumber.from(10).mul(
+                                  await IERC20Detailed__factory.connect(
+                                      t0,
+                                      stakers[0].provider!
+                                  ).decimals()
+                              );
+                    const amt1 =
+                        t1 === ETH_ADDRESS
+                            ? BigNumber.from(10).pow(10)
+                            : BigNumber.from(10).mul(
+                                  await IERC20Detailed__factory.connect(
+                                      t1,
+                                      stakers[0].provider!
+                                  ).decimals()
+                              );
+                    return build_add_liquidity(staker, t0, t1, amt0, amt1);
+                })
+            ).then((txs) =>
+                sign_transactions(staker, _.flatten(txs)).then((signed) =>
+                    send_transactions(staker.provider!, signed)
+                )
+            )
+        )
+    );
+    await Promise.all(
+        stakers.map((staker) =>
+            Promise.all(
+                _.map(geysers, (geyser) => build_stake(staker, geyser))
+            ).then((txs) =>
+                sign_transactions(staker, _.flatten(txs)).then((signed) =>
+                    send_transactions(staker.provider!, signed)
+                )
+            )
+        )
+    );
 };
 
 const mint_and_signal = async (
     locker: Signer,
     minter: Signer,
-    tokens: TokensMap,
+    tokens: StakedTokensMap,
     multiplexer: Multiplexer,
     geysers: GeysersMap,
     startTime: number,
@@ -133,8 +290,9 @@ const mint_and_signal = async (
             const mintAmt = BigNumber.from(10)
                 .pow(await token.decimals())
                 .mul(toDistribute);
-            await token.populateTransaction
-                .mint(multiplexer.address, mintAmt)
+            await token
+                .connect(minter)
+                .populateTransaction.mint(multiplexer.address, mintAmt)
                 .then((tx) => minterTxns.push(tx));
 
             const stakeAmt = BigNumber.from(10)
@@ -142,8 +300,9 @@ const mint_and_signal = async (
                 .mul(toDistributePerGeyser);
             await Promise.all(
                 _.map(geysers, async (geyser) => {
-                    await geyser.populateTransaction
-                        .signalTokenLock(
+                    await geyser
+                        .connect(locker)
+                        .populateTransaction.signalTokenLock(
                             token.address,
                             await valueToShares(token, stakeAmt),
                             durationSec,
@@ -156,10 +315,16 @@ const mint_and_signal = async (
     ).then((all) => _.flatten(all));
     const lockerSigned = sign_transactions(locker, lockerTxns);
     const minterSigned = sign_transactions(minter, minterTxns);
-    const txrsLocker = await send_transactions(minter.provider!, lockerSigned);
+    const txrsLocker = await send_transactions(locker.provider!, lockerSigned);
     await wait_for_confirmed(txrsLocker);
     const txrsminter = await send_transactions(minter.provider!, minterSigned);
     await wait_for_confirmed(txrsminter);
 };
 
-export { mint_and_stake, deploy_staked_token, deploy_staked_tokens, mint_and_signal };
+export {
+    mint_to_stakers,
+    add_lp_and_stake,
+    deploy_staked_token,
+    deploy_staked_tokens,
+    mint_and_signal,
+};

@@ -1,7 +1,6 @@
 import _ from "lodash";
 import path from "path";
 import { BigNumber, Signer, Wallet } from "ethers";
-import { TokensMap, GeysersMap } from "./types";
 import { StakedToken, Multiplexer__factory } from "../typechain";
 import { StakehoundContext } from "./system";
 import {
@@ -13,6 +12,9 @@ import {
 import { readFileSync } from "fs";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import S3 from "aws-sdk/clients/s3";
+import { pack, keccak256 } from "@ethersproject/solidity";
+import { getCreate2Address } from "@ethersproject/address";
+import { FACTORY_ADDRESS, INIT_CODE_HASH } from "@uniswap/sdk";
 
 const fetchConfig = (
     configPath: string
@@ -64,4 +66,21 @@ const sharesToValue = async (st: StakedToken, shares: BigNumber) => {
     return shares.div(sharesPerToken);
 };
 
-export { valueToShares, sharesToValue, fetchContext, fetchConfig };
+const get_pair = (tokenA: string, tokenB: string) => {
+    let token0: string;
+    let token1: string;
+    if (tokenA.toLowerCase() < tokenB.toLowerCase()) {
+        token0 = tokenA;
+        token1 = tokenB;
+    } else {
+        token0 = tokenB;
+        token1 = tokenA;
+    }
+    return getCreate2Address(
+        FACTORY_ADDRESS,
+        keccak256(["bytes"], [pack(["address", "address"], [token0, token1])]),
+        INIT_CODE_HASH
+    );
+};
+
+export { valueToShares, sharesToValue, fetchContext, fetchConfig, get_pair };

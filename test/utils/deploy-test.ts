@@ -43,10 +43,8 @@ const unstake_all = async (con: DeployTestContext) => {
             Promise.all(
                 _.map(geysers, async (geyser) => {
                     const stakedToken = con.tokens[await geyser.getStakingToken()];
-                    const shares = await geyser.totalStakedFor(
-                        await signer.getAddress()
-                    );
-                    const val = await sharesToValue(stakedToken, shares);
+                    const val = await geyser.totalStakedFor(await signer.getAddress());
+                    //const val = await sharesToValue(stakedToken, shares)
                     return geyser.populateTransaction.unstake(val, "0x");
                 })
             ).then((all) => {

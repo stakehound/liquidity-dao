@@ -35,7 +35,9 @@ const config: HardhatUserConfig = {
         },
         ropsten: {
             accounts: { mnemonic: process.env.MNEMONIC },
-            url: "https://eth-ropsten.alchemyapi.io/v2/MnO3SuHlzuCydPWE1XhsYZM_pHZP8_ix",
+            timeout: 60 * 30 * 1000,
+            url:
+                "https://eth-ropsten.alchemyapi.io/v2/MnO3SuHlzuCydPWE1XhsYZM_pHZP8_ix",
         },
         rinkeby: {
             accounts: { mnemonic: process.env.MNEMONIC },
@@ -43,8 +45,8 @@ const config: HardhatUserConfig = {
         },
     },
     mocha: {
-        timeout: 60 * 5 * 100
-    }
+        timeout: 60 * 30 * 1000,
+    },
 };
 
 export default config;

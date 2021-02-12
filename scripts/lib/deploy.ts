@@ -7,6 +7,7 @@ import {
     StakehoundGeyser,
     Multiplexer,
     Multiplexer__factory,
+    IERC20Detailed,
 } from "../../typechain";
 import { TokensMap, GeysersMap } from "../../src/types";
 import { delay_parallel_effects } from "./utils";
@@ -19,18 +20,16 @@ const deploy_geysers = async (
     locker: string
 ) => {
     let map: GeysersMap = {} as any;
-    await delay_parallel_effects(
-        _.map(tokens, (contract) => () =>
-            deploy_geyser(contract, startTime, admin, locker).then((g) => {
-                map[getAddress(g.address)] = g;
-            })
-        )
-    );
+    for (const kv of _.values(tokens)) {
+        await deploy_geyser(kv, startTime, admin, locker).then(
+            (g) => (map[getAddress(g.address)] = g)
+        );
+    }
     return map;
 };
 
 const deploy_geyser = async (
-    token: StakedToken,
+    token: IERC20Detailed,
     startTime: number,
     admin: string,
     locker: string
@@ -44,7 +43,7 @@ const deploy_geyser = async (
         { unsafeAllowCustomTypes: true }
     )) as StakehoundGeyser;
     await geyser.deployed();
-    logger.info(`${await token.name()}Geyser deployed to: ${geyser.address}`);
+    logger.info(`Geyser deployed to: ${geyser.address}`);
     return geyser;
 };
 
