@@ -678,19 +678,10 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
                     logger.error(
                         `calc_stakes_unstake: more shares being unstaked than were registered staked for user ${user}`
                     );
+                    logger.error(`calc_stakes_unstake: unstake`, unstake);
                     logger.error(
-                        `calc_stakes_unstake: unstake: ${JSON.stringify(
-                            unstake,
-                            null,
-                            2
-                        )}`
-                    );
-                    logger.error(
-                        `calc_stakes_unstake: user stakes: ${JSON.stringify(
-                            debug,
-                            null,
-                            2
-                        )}`
+                        `calc_stakes_unstake: user stakes`,
+                        JSON.stringify(debug, null, 2)
                     );
                     break;
                 }
