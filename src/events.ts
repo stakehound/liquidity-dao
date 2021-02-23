@@ -17,6 +17,7 @@ const fetchEvents = async (
     toBlock: number,
     provider: Provider
 ) => {
+    console.log("fetching events");
     const filter = {
         address,
         fromBlock,
@@ -25,6 +26,7 @@ const fetchEvents = async (
     const logs: Log[] = [];
     try {
         while (filter.fromBlock! <= toBlock) {
+            console.log("event filter", filter);
             logs.push(...(await provider.getLogs(filter)));
             filter.fromBlock = filter.fromBlock + 10000;
             const nextTo = filter.fromBlock + 9999;
@@ -69,7 +71,7 @@ const collectActions = (logs: Log[]) => {
                     ? "clear"
                     : null;
             if (!type) {
-                if(!parsed.name.includes('Role')) {
+                if (!parsed.name.includes("Role")) {
                     logger.error(`parseEvent: unexpected event ${parsed.name}`);
                 }
                 continue;
@@ -104,15 +106,6 @@ const collectActions = (logs: Log[]) => {
             });
         } catch (e) {
             logger.error(`parseEvents: failed to parse event ${log} error:${e}`);
-        }
-    }
-    for (let i = 0; i < acts.length; i++) {
-        for (let j = i + 1; j < acts.length; j++) {
-            if (acts[j].timestamp === acts[i].timestamp) {
-                acts[j].timestamp++;
-            } else {
-                break;
-            }
         }
     }
     return acts;
