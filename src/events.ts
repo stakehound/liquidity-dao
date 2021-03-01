@@ -1,5 +1,6 @@
 import { BigNumber } from "bignumber.js";
 import { Log, Provider } from "@ethersproject/providers";
+import _ from "lodash";
 import { GeyserAction } from "./calc_stakes";
 import { ethers } from "ethers";
 import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser.sol/StakehoundGeyser.json";
@@ -17,32 +18,40 @@ const fetchEvents = async (
     toBlock: number,
     provider: Provider
 ) => {
-    console.log("fetching events");
     const filter = {
         address,
         fromBlock,
-        toBlock,
+        toBlock: _.min([fromBlock + 9999, toBlock]),
     };
     const logs: Log[] = [];
     try {
         while (filter.fromBlock! <= toBlock) {
-            console.log("event filter", filter);
             logs.push(...(await provider.getLogs(filter)));
             filter.fromBlock = filter.fromBlock + 10000;
             const nextTo = filter.fromBlock + 9999;
             filter.toBlock = toBlock < nextTo ? toBlock : nextTo;
         }
-        return logs.sort((x, y) =>
-            x.blockNumber < y.blockNumber
-                ? -1
-                : x.blockNumber > y.blockNumber
-                ? 1
-                : x.logIndex < y.logIndex
-                ? -1
-                : x.logIndex > y.logIndex
-                ? 1
-                : 0
-        );
+        return logs
+            .filter(
+                (x, i) =>
+                    logs.findIndex(
+                        (y) =>
+                            y.blockHash == x.blockHash &&
+                            y.transactionHash == x.transactionHash &&
+                            y.logIndex == x.logIndex
+                    ) === i
+            )
+            .sort((x, y) =>
+                x.blockNumber < y.blockNumber
+                    ? -1
+                    : x.blockNumber > y.blockNumber
+                    ? 1
+                    : x.logIndex < y.logIndex
+                    ? -1
+                    : x.logIndex > y.logIndex
+                    ? 1
+                    : 0
+            );
     } catch (e) {
         logger.error("failed fetching events", e);
         return [];

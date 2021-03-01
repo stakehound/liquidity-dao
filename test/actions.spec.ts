@@ -14,15 +14,23 @@ import geyserAbi from "../artifacts/contracts/stakehound-geyser/StakehoundGeyser
 import stakedTokenAbi from "../src/abi/StakedToken.json";
 import { Interface, LogDescription } from "ethers/lib/utils";
 import {
-    fetch_system_rewards,
+    fetch_system_actions,
+    reduce_system_actions,
     compare_rewards,
     compare_users,
     validate_rewards,
     compare_distributed,
     validate_distributed,
+    parse_rewards_fixed,
+    rewards_to_fixed,
+    Rewards,
+    get_distributed,
 } from "../src/calc_stakes";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { deploy_test_scenario, DeployTestContext } from "../scripts/test/lib/test-scenario";
+import {
+    deploy_test_scenario,
+    DeployTestContext,
+} from "../scripts/test/lib/test-scenario";
 import { unstake_all, clear_all } from "./utils/deploy-test";
 
 const giface = new ethers.utils.Interface(
@@ -31,6 +39,14 @@ const giface = new ethers.utils.Interface(
 const siface = new ethers.utils.Interface(stakedTokenAbi) as StakedToken["interface"];
 
 use(solidity);
+
+const strip_zero_account = (r: Rewards) => {
+    delete r.users["0x0000000000000000000000000000000000000000"];
+    const { rewards, rewardsInRange } = get_distributed(r);
+    r.rewardsDistributed = rewards;
+    r.rewardsDistributedInRange = rewardsInRange;
+    return parse_rewards_fixed(rewards_to_fixed(r));
+};
 
 describe("Action tests", function () {
     let signers: SignerWithAddress[];
@@ -51,14 +67,20 @@ describe("Action tests", function () {
         const endBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
-        const geysers = _.keys(con.geysers)
-        const oneday = await fetch_system_rewards(
+        const geysers = _.keys(con.geysers);
+        const oneacts = await fetch_system_actions(
             ethers.provider,
             geysers,
             con.startBlock.number,
-            endBlock.number,
+            endBlock.number
+        );
+        const oneday = await reduce_system_actions(
+            ethers.provider,
+            geysers,
+            con.startBlock.number,
             con.startBlock.timestamp + 60 * 60 * 24,
-            1
+            1,
+            oneacts
         );
 
         await HRE.network.provider.request({
@@ -66,18 +88,25 @@ describe("Action tests", function () {
             params: [con.startBlock.timestamp + 60 * 60 * 24],
         });
 
-        await clear_all(con)
+        await clear_all(con);
         const newEnd = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
 
-        const twodays = await fetch_system_rewards(
+        const twoacts = await fetch_system_actions(
             ethers.provider,
             geysers,
             con.startBlock.number,
-            newEnd.number,
+            newEnd.number
+        );
+
+        const twodays = await reduce_system_actions(
+            ethers.provider,
+            geysers,
+            con.startBlock.number,
             con.startBlock.timestamp + 60 * 60 * 24 * 2,
-            1
+            1,
+            twoacts
         );
 
         expect(validate_rewards(oneday)).to.eq(true);
@@ -89,14 +118,20 @@ describe("Action tests", function () {
         const endBlock = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
-        const geysers = _.keys(con.geysers)
-        const onedayP = fetch_system_rewards(
+        const geysers = _.keys(con.geysers);
+        const oneacts = await fetch_system_actions(
             ethers.provider,
             geysers,
             con.startBlock.number,
-            endBlock.number,
+            endBlock.number
+        );
+        const onedayP = reduce_system_actions(
+            ethers.provider,
+            geysers,
+            con.startBlock.number,
             con.startBlock.timestamp + 60 * 60 * 24,
             1,
+            oneacts,
             false
         );
 
@@ -110,25 +145,38 @@ describe("Action tests", function () {
         const newEnd = await ethers.provider.getBlock(
             await ethers.provider.getBlockNumber()
         );
-
+        const twoacts = await fetch_system_actions(
+            ethers.provider,
+            geysers,
+            con.startBlock.number,
+            newEnd.number
+        );
         const [oneday, twodays] = await onedayP.then(async (oneday) => [
             oneday,
-            await fetch_system_rewards(
+            await reduce_system_actions(
                 ethers.provider,
                 geysers,
                 con.startBlock.number,
-                newEnd.number,
                 con.startBlock.timestamp + 60 * 60 * 24 * 2,
                 1,
+                twoacts,
                 false
             ),
         ]);
-
         expect(validate_rewards(oneday)).to.eq(true);
-        expect(validate_rewards(twodays)).to.eq(false);
+        expect(validate_rewards(twodays)).to.eq(true);
         expect(validate_distributed(twodays)).to.eq(true);
-        expect(compare_distributed(oneday, twodays)).to.eq(true);
-        expect(compare_users(oneday, twodays)).to.eq(true);
+        expect(compare_distributed(oneday, twodays)).to.eq(false);
+        expect(compare_users(oneday, twodays)).to.eq(false);
         expect(compare_rewards(oneday, twodays)).to.eq(false);
+        expect(
+            compare_distributed(strip_zero_account(oneday), strip_zero_account(twodays))
+        ).to.eq(true);
+        expect(
+            compare_users(strip_zero_account(oneday), strip_zero_account(twodays))
+        ).to.eq(true);
+        expect(
+            compare_rewards(strip_zero_account(oneday), strip_zero_account(twodays))
+        ).to.eq(true);
     });
 });

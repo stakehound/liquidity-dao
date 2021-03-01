@@ -39,7 +39,6 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     EnumerableSetUpgradeable.AddressSet distributionTokens;
 
     mapping(address => uint256) internal _userTotals;
-    mapping(address => UnlockSchedule[]) public unlockSchedules;
 
     event Staked(address indexed user, uint256 shares, uint256 total, uint256 indexed timestamp);
     event Unstaked(address indexed user, uint256 shares, uint256 total, uint256 indexed timestamp);
@@ -72,7 +71,7 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
 
         globalStartTime = globalStartTime_;
         // needs to be commented for tests
-        // emit Staked(address(0), 1, 1, globalStartTime_);
+        emit Staked(address(0), 1, 1, globalStartTime_);
     }
 
     /// ===== Modifiers =====
@@ -129,17 +128,6 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
      */
     function totalStakedFor(address addr) public view returns (uint256) {
         return _userTotals[addr];
-    }
-
-    /**
-     * @return Number of unlock schedules.
-     */
-    function unlockScheduleCount(address token) public view returns (uint256) {
-        return unlockSchedules[token].length;
-    }
-
-    function getUnlockSchedulesFor(address token) public view returns (UnlockSchedule[] memory) {
-        return unlockSchedules[token];
     }
 
     /// ===== Public Actions =====

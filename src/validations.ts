@@ -4,13 +4,9 @@ import { getAddress } from "ethers/lib/utils";
 const distributionSchema = z.object({
     cycle: z.number(),
     rewards: z.record(z.string()),
-    rewardsInRange: z.record(z.string()),
-    rewardsDistributed: z.record(z.string()),
-    rewardsDistributedInRange: z.record(z.string()),
     users: z.record(
         z.object({
             reward: z.record(z.string()),
-            rewardInRange: z.record(z.string()),
         })
     ),
 });

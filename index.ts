@@ -7,6 +7,8 @@ import {
     init_rewards,
     run_approve,
     run_init,
+    run_force_approve,
+    run_force_propose,
 } from "./src/system";
 import S3 from "aws-sdk/clients/s3";
 import { JsonRpcProvider } from "@ethersproject/providers";
@@ -36,6 +38,20 @@ const argv = yargs(process.argv.slice(2))
             describe: "JSON file to read config",
         })
     )
+    .command("force-propose <config>", "run reward proposer once, don't validate", (yargv) =>
+        yargv.positional("config", {
+            type: "string",
+            demandOption: true,
+            describe: "JSON file to read config",
+        })
+    )
+    .command("force-approve <config>", "run reward approver once, don't validate", (yargv) =>
+        yargv.positional("config", {
+            type: "string",
+            demandOption: true,
+            describe: "JSON file to read config",
+        })
+    )
     .option("logfile", {
         type: "string",
         demandOption: true,
@@ -50,8 +66,8 @@ const run_with_context = (
         .then((con) => {
             logger.info({
                 role: argv._[0],
-                epoch: `${con.epoch / 60} minutes`
-            })
+                epoch: `${con.epoch / 60} minutes`,
+            });
             return func(con, con.signer);
         })
         .then(() => process.exit(0))
@@ -67,4 +83,8 @@ if (argv._[0] === "propose") {
     run_with_context(run_init);
 } else if (argv._[0] === "approve") {
     run_with_context(run_approve);
+} else if (argv._[0] === "force-approve") {
+    run_with_context(run_force_approve);
+} else if (argv._[0] === "force-propose") {
+    run_with_context(run_force_propose);
 }

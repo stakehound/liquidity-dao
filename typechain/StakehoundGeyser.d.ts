@@ -33,7 +33,6 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
     "getRoleMember(bytes32,uint256)": FunctionFragment;
     "getRoleMemberCount(bytes32)": FunctionFragment;
     "getStakingToken()": FunctionFragment;
-    "getUnlockSchedulesFor(address)": FunctionFragment;
     "globalStartTime()": FunctionFragment;
     "grantRole(bytes32,address)": FunctionFragment;
     "hasRole(bytes32,address)": FunctionFragment;
@@ -46,8 +45,6 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
     "supportsHistory()": FunctionFragment;
     "totalStaked()": FunctionFragment;
     "totalStakedFor(address)": FunctionFragment;
-    "unlockScheduleCount(address)": FunctionFragment;
-    "unlockSchedules(address,uint256)": FunctionFragment;
     "unstake(uint256,bytes)": FunctionFragment;
   };
 
@@ -96,10 +93,6 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "getUnlockSchedulesFor",
-    values: [string]
-  ): string;
-  encodeFunctionData(
     functionFragment: "globalStartTime",
     values?: undefined
   ): string;
@@ -146,14 +139,6 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: "totalStakedFor",
     values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "unlockScheduleCount",
-    values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "unlockSchedules",
-    values: [string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "unstake",
@@ -205,10 +190,6 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getUnlockSchedulesFor",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "globalStartTime",
     data: BytesLike
   ): Result;
@@ -236,14 +217,6 @@ interface StakehoundGeyserInterface extends ethers.utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "totalStakedFor",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "unlockScheduleCount",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "unlockSchedules",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "unstake", data: BytesLike): Result;
@@ -355,34 +328,6 @@ export class StakehoundGeyser extends Contract {
     getStakingToken(overrides?: CallOverrides): Promise<[string]>;
 
     "getStakingToken()"(overrides?: CallOverrides): Promise<[string]>;
-
-    getUnlockSchedulesFor(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [
-        ([BigNumber, BigNumber, BigNumber, BigNumber] & {
-          sharesLocked: BigNumber;
-          endAtSec: BigNumber;
-          durationSec: BigNumber;
-          startTime: BigNumber;
-        })[]
-      ]
-    >;
-
-    "getUnlockSchedulesFor(address)"(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<
-      [
-        ([BigNumber, BigNumber, BigNumber, BigNumber] & {
-          sharesLocked: BigNumber;
-          endAtSec: BigNumber;
-          durationSec: BigNumber;
-          startTime: BigNumber;
-        })[]
-      ]
-    >;
 
     globalStartTime(overrides?: CallOverrides): Promise<[BigNumber]>;
 
@@ -512,42 +457,6 @@ export class StakehoundGeyser extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
-    unlockScheduleCount(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
-
-    "unlockScheduleCount(address)"(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
-
-    unlockSchedules(
-      arg0: string,
-      arg1: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber] & {
-        sharesLocked: BigNumber;
-        endAtSec: BigNumber;
-        durationSec: BigNumber;
-        startTime: BigNumber;
-      }
-    >;
-
-    "unlockSchedules(address,uint256)"(
-      arg0: string,
-      arg1: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber] & {
-        sharesLocked: BigNumber;
-        endAtSec: BigNumber;
-        durationSec: BigNumber;
-        startTime: BigNumber;
-      }
-    >;
-
     unstake(
       amount: BigNumberish,
       data: BytesLike,
@@ -633,30 +542,6 @@ export class StakehoundGeyser extends Contract {
   getStakingToken(overrides?: CallOverrides): Promise<string>;
 
   "getStakingToken()"(overrides?: CallOverrides): Promise<string>;
-
-  getUnlockSchedulesFor(
-    token: string,
-    overrides?: CallOverrides
-  ): Promise<
-    ([BigNumber, BigNumber, BigNumber, BigNumber] & {
-      sharesLocked: BigNumber;
-      endAtSec: BigNumber;
-      durationSec: BigNumber;
-      startTime: BigNumber;
-    })[]
-  >;
-
-  "getUnlockSchedulesFor(address)"(
-    token: string,
-    overrides?: CallOverrides
-  ): Promise<
-    ([BigNumber, BigNumber, BigNumber, BigNumber] & {
-      sharesLocked: BigNumber;
-      endAtSec: BigNumber;
-      durationSec: BigNumber;
-      startTime: BigNumber;
-    })[]
-  >;
 
   globalStartTime(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -783,42 +668,6 @@ export class StakehoundGeyser extends Contract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
-  unlockScheduleCount(
-    token: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
-
-  "unlockScheduleCount(address)"(
-    token: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
-
-  unlockSchedules(
-    arg0: string,
-    arg1: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<
-    [BigNumber, BigNumber, BigNumber, BigNumber] & {
-      sharesLocked: BigNumber;
-      endAtSec: BigNumber;
-      durationSec: BigNumber;
-      startTime: BigNumber;
-    }
-  >;
-
-  "unlockSchedules(address,uint256)"(
-    arg0: string,
-    arg1: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<
-    [BigNumber, BigNumber, BigNumber, BigNumber] & {
-      sharesLocked: BigNumber;
-      endAtSec: BigNumber;
-      durationSec: BigNumber;
-      startTime: BigNumber;
-    }
-  >;
-
   unstake(
     amount: BigNumberish,
     data: BytesLike,
@@ -901,30 +750,6 @@ export class StakehoundGeyser extends Contract {
     getStakingToken(overrides?: CallOverrides): Promise<string>;
 
     "getStakingToken()"(overrides?: CallOverrides): Promise<string>;
-
-    getUnlockSchedulesFor(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<
-      ([BigNumber, BigNumber, BigNumber, BigNumber] & {
-        sharesLocked: BigNumber;
-        endAtSec: BigNumber;
-        durationSec: BigNumber;
-        startTime: BigNumber;
-      })[]
-    >;
-
-    "getUnlockSchedulesFor(address)"(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<
-      ([BigNumber, BigNumber, BigNumber, BigNumber] & {
-        sharesLocked: BigNumber;
-        endAtSec: BigNumber;
-        durationSec: BigNumber;
-        startTime: BigNumber;
-      })[]
-    >;
 
     globalStartTime(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1050,42 +875,6 @@ export class StakehoundGeyser extends Contract {
       addr: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
-
-    unlockScheduleCount(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    "unlockScheduleCount(address)"(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    unlockSchedules(
-      arg0: string,
-      arg1: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber] & {
-        sharesLocked: BigNumber;
-        endAtSec: BigNumber;
-        durationSec: BigNumber;
-        startTime: BigNumber;
-      }
-    >;
-
-    "unlockSchedules(address,uint256)"(
-      arg0: string,
-      arg1: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber] & {
-        sharesLocked: BigNumber;
-        endAtSec: BigNumber;
-        durationSec: BigNumber;
-        startTime: BigNumber;
-      }
-    >;
 
     unstake(
       amount: BigNumberish,
@@ -1219,16 +1008,6 @@ export class StakehoundGeyser extends Contract {
 
     "getStakingToken()"(overrides?: CallOverrides): Promise<BigNumber>;
 
-    getUnlockSchedulesFor(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    "getUnlockSchedulesFor(address)"(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     globalStartTime(overrides?: CallOverrides): Promise<BigNumber>;
 
     "globalStartTime()"(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1354,28 +1133,6 @@ export class StakehoundGeyser extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    unlockScheduleCount(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    "unlockScheduleCount(address)"(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    unlockSchedules(
-      arg0: string,
-      arg1: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    "unlockSchedules(address,uint256)"(
-      arg0: string,
-      arg1: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     unstake(
       amount: BigNumberish,
       data: BytesLike,
@@ -1481,16 +1238,6 @@ export class StakehoundGeyser extends Contract {
     getStakingToken(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     "getStakingToken()"(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    getUnlockSchedulesFor(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    "getUnlockSchedulesFor(address)"(
-      token: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -1623,28 +1370,6 @@ export class StakehoundGeyser extends Contract {
 
     "totalStakedFor(address)"(
       addr: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    unlockScheduleCount(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    "unlockScheduleCount(address)"(
-      token: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    unlockSchedules(
-      arg0: string,
-      arg1: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    "unlockSchedules(address,uint256)"(
-      arg0: string,
-      arg1: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 

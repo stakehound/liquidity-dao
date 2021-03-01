@@ -173,7 +173,7 @@ class MultiMerkle {
             {
                 cycle: rewards.cycle,
                 merkleRoot: merkle.getHexRoot(),
-                tokenTotals: rewardsFixed.rewardsDistributed,
+                tokenTotals: rewardsFixed.rewards,
                 claims: {},
             }
         );

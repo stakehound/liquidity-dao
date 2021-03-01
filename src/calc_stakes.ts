@@ -3,7 +3,7 @@ import _ from "lodash";
 import { BigNumber } from "bignumber.js";
 import { Provider } from "@ethersproject/providers";
 
-import { StakehoundConfig } from "./config";
+import { GeyserConfig } from "./config";
 import { collectActions, fetchEvents } from "./events";
 import { StakehoundGeyser__factory } from "../typechain";
 import logger from "./logger";
@@ -13,6 +13,14 @@ BigNumber.set({
     DECIMAL_PLACES: 200,
     POW_PRECISION: 20,
 });
+// how many decimal places of imprecision we tolerate
+// can probably raise non-user precision as time goes on
+// this one is comparing recalculation, so can have most precision
+const VALIDATE_PRECISION_COMPARE = 3
+// this one compares sum of rewards to total distributed - more lossy
+const VALIDATE_PRECISION_TOTALS_DISTRIBUTED = 3
+// smaller numbers, so less precision
+const VALIDATE_PRECISION_USERS = 2
 
 interface Stake {
     shares: BigNumber;
@@ -174,7 +182,7 @@ const parse_user_reward_fixed = (
 ): UserRewards => {
     return {
         reward: parse_token_reward_fixed(r.reward),
-        rewardInRange: parse_token_reward_fixed(r.rewardInRange),
+        rewardInRange: parse_token_reward_fixed(r.reward),
     };
 };
 
@@ -182,9 +190,9 @@ const parse_rewards_fixed = (r: RewardsFixed): Rewards => {
     return {
         cycle: r.cycle,
         rewards: parse_token_reward_fixed(r.rewards),
-        rewardsInRange: parse_token_reward_fixed(r.rewardsInRange),
+        rewardsInRange: parse_token_reward_fixed(r.rewards),
         rewardsDistributed: parse_token_reward_fixed(r.rewards),
-        rewardsDistributedInRange: parse_token_reward_fixed(r.rewardsInRange),
+        rewardsDistributedInRange: parse_token_reward_fixed(r.rewards),
         users: _.transform(
             r.users,
             (acc: { [user: string]: UserRewards }, val, key) => {
@@ -208,17 +216,13 @@ const token_reward_to_fixed = (r: TokenReward) => {
 const user_reward_to_fixed = (r: UserRewards) => {
     return {
         reward: token_reward_to_fixed(r.reward),
-        rewardInRange: token_reward_to_fixed(r.rewardInRange),
     };
 };
 
 const rewards_to_fixed = (r: Rewards) => {
     return {
         cycle: r.cycle,
-        rewards: token_reward_to_fixed(r.rewards),
-        rewardsInRange: token_reward_to_fixed(r.rewardsInRange),
-        rewardsDistributed: token_reward_to_fixed(r.rewards),
-        rewardsDistributedInRange: token_reward_to_fixed(r.rewardsInRange),
+        rewards: token_reward_to_fixed(r.rewardsDistributed),
         users: _.transform(
             r.users,
             (
@@ -343,13 +347,13 @@ const compare_distributed = (r0: Rewards, r1: Rewards) => {
     if (!_.isEqual(tokens, _.keys(r1.rewards).sort())) return false;
     const users = _.keys(r0.users).sort();
     if (!_.isEqual(users, _.keys(r1.users).sort())) return false;
-    if (!compare_token_rewards([r0.rewardsDistributed, r1.rewardsDistributed]))
+    if (!compare_token_rewards([r0.rewardsDistributed, r1.rewardsDistributed], VALIDATE_PRECISION_COMPARE))
         return false;
     if (
         !compare_token_rewards([
             r0.rewardsDistributedInRange,
             r1.rewardsDistributedInRange,
-        ])
+        ], VALIDATE_PRECISION_COMPARE)
     )
         return false;
     return true;
@@ -360,8 +364,8 @@ const compare_rewards = (r0: Rewards, r1: Rewards) => {
     if (!_.isEqual(tokens, _.keys(r1.rewards).sort())) return false;
     const users = _.keys(r0.users).sort();
     if (!_.isEqual(users, _.keys(r1.users).sort())) return false;
-    if (!compare_token_rewards([r0.rewards, r1.rewards])) return false;
-    if (!compare_token_rewards([r0.rewardsInRange, r1.rewardsInRange])) return false;
+    if (!compare_token_rewards([r0.rewards, r1.rewards], VALIDATE_PRECISION_TOTALS_DISTRIBUTED)) return false;
+    if (!compare_token_rewards([r0.rewardsInRange, r1.rewardsInRange], VALIDATE_PRECISION_TOTALS_DISTRIBUTED)) return false;
     return compare_distributed(r0, r1) && compare_users(r0, r1);
 };
 
@@ -372,11 +376,11 @@ const compare_users = (r0: Rewards, r1: Rewards) => {
     if (!_.isEqual(users, _.keys(r1.users).sort())) return false;
     for (const u of users) {
         if (
-            !compare_token_rewards([r0.users[u].reward, r1.users[u].reward]) ||
+            !compare_token_rewards([r0.users[u].reward, r1.users[u].reward], VALIDATE_PRECISION_USERS) ||
             !compare_token_rewards([
                 r0.users[u].rewardInRange,
                 r1.users[u].rewardInRange,
-            ])
+            ], VALIDATE_PRECISION_USERS)
         )
             return false;
     }
@@ -446,14 +450,14 @@ const combine_rewards = (cycle: number, rewards: Rewards[]) => {
     return comb;
 };
 
-const compare_token_rewards = (r: TokenReward[]) => {
+const compare_token_rewards = (r: TokenReward[], precision: number) => {
     const rest = r.slice(1);
     return _.keys(r[0]).every((addr, i) =>
         rest.every((t) =>
             r[0][addr]
                 .minus(t[addr])
                 .abs()
-                .lt(pow10(r[0][addr].toFixed(0).length - 1))
+                .lt(pow10(r[0][addr].toFixed(0).length - precision))
         )
     );
 };
@@ -461,16 +465,16 @@ const compare_token_rewards = (r: TokenReward[]) => {
 const validate_rewards = (r: Rewards) => {
     return (
         validate_distributed(r) &&
-        compare_token_rewards([r.rewardsDistributed, r.rewards]) &&
-        compare_token_rewards([r.rewardsDistributedInRange, r.rewardsInRange])
+        compare_token_rewards([r.rewardsDistributed, r.rewards], VALIDATE_PRECISION_TOTALS_DISTRIBUTED) &&
+        compare_token_rewards([r.rewardsDistributedInRange, r.rewardsInRange], VALIDATE_PRECISION_TOTALS_DISTRIBUTED)
     );
 };
 
 const validate_distributed = (r: Rewards) => {
     const { rewards, rewardsInRange } = get_distributed(r);
     return (
-        compare_token_rewards([rewards, r.rewardsDistributed]) &&
-        compare_token_rewards([rewardsInRange, r.rewardsDistributedInRange])
+        compare_token_rewards([rewards, r.rewardsDistributed], VALIDATE_PRECISION_TOTALS_DISTRIBUTED) &&
+        compare_token_rewards([rewardsInRange, r.rewardsDistributedInRange], VALIDATE_PRECISION_TOTALS_DISTRIBUTED)
     );
 };
 
@@ -482,7 +486,7 @@ interface SystemActions {
     [geyserAddress: string]: GeyserAction[];
 }
 interface SystemConfig {
-    [geyserAddress: string]: StakehoundConfig;
+    [geyserAddress: string]: GeyserConfig;
 }
 
 const fetch_system_config = async (
@@ -522,18 +526,17 @@ const fetch_system_actions = async (
     );
 };
 
-const fetch_system_rewards = async (
+const reduce_system_actions = async (
     provider: Provider,
     geysers: string[],
     startBlock: number,
-    endBlock: number,
     endTime: number,
     cycle: number,
+    acts: SystemActions,
     validate: boolean = true
 ) => {
     const absTime = await provider.getBlock(startBlock).then((b) => b.timestamp);
     const config = await fetch_system_config(provider, geysers);
-    const acts = await fetch_system_actions(provider, geysers, startBlock, endBlock);
     const calc = create_calc_system_stakes(config);
     const system = calc(acts, absTime, absTime, endTime);
     const r = get_system_rewards(system, cycle);
@@ -543,19 +546,18 @@ const fetch_system_rewards = async (
     return r;
 };
 
-const play_system_rewards = async (
+const play_system_actions = async (
     lastRewards: Rewards,
     provider: Provider,
     geysers: string[],
     startBlock: number,
-    endBlock: number,
     relTime: number,
     endTime: number,
+    acts: SystemActions,
     validate: boolean = true
 ) => {
     const absTime = await provider.getBlock(startBlock).then((b) => b.timestamp);
     const config = await fetch_system_config(provider, geysers);
-    const acts = await fetch_system_actions(provider, geysers, startBlock, endBlock);
     const calc = create_calc_system_stakes(config);
     const systemAbs = calc(acts, absTime, absTime, endTime);
     const systemRel = calc(acts, absTime, relTime, endTime);
@@ -573,7 +575,7 @@ const get_system_rewards = (st: SystemState, cycle: number) => {
     return sum_rewards(_.values(st).map((x) => get_rewards(x, cycle)));
 };
 
-const create_calc_system_stakes = (geysers: { [addr: string]: StakehoundConfig }) => {
+const create_calc_system_stakes = (geysers: { [addr: string]: GeyserConfig }) => {
     const cgs = _.transform(
         geysers,
         (acc, val, key) => {
@@ -597,7 +599,7 @@ const create_calc_system_stakes = (geysers: { [addr: string]: StakehoundConfig }
         );
 };
 
-const create_calc_geyser_stakes = (config: StakehoundConfig) => {
+const create_calc_geyser_stakes = (config: GeyserConfig) => {
     const calc_geyser_stakes = (
         acts: GeyserAction[],
         absTime: number,
@@ -612,7 +614,7 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
     const process_actions = (st: GeyserState, acts: GeyserAction[]) => {
         for (const act of acts) {
             if (act.timestamp > st.endTime) {
-                continue; // throw ?
+                break;
             } else if (act.type === "unlock") {
                 unlock(st, act);
                 continue;
@@ -671,23 +673,15 @@ const create_calc_geyser_stakes = (config: StakehoundConfig) => {
             st.lastUpdate = unstake.timestamp;
             let toUnstake = unstake.shares;
             const u = st.users[user];
-            const debug = _.cloneDeep(st.users[user].stakes);
             let i = u.stakes.length - 1;
             while (toUnstake.gt(0)) {
                 if (i < 0) {
                     logger.error(
                         `calc_stakes_unstake: more shares being unstaked than were registered staked for user ${user}`
                     );
-                    logger.error(`calc_stakes_unstake: unstake`, unstake);
-                    logger.error(`calc_stakes_unstake: user stakes`, debug);
-                    console.log(
-                        `calc_stakes_unstake: user stakes ${JSON.stringify(
-                            debug,
-                            null,
-                            2
-                        )}`
+                    throw new Error(
+                        `calc_stakes_unstake: more shares being unstaked than were registered staked for user ${user}`
                     );
-                    break;
                 }
                 const stake = u.stakes[i];
                 if (stake.shares.lte(toUnstake)) {
@@ -866,17 +860,19 @@ export {
     Rewards,
     RewardsFixed,
     TokenReward,
+    fetch_system_actions,
     parse_rewards_fixed,
     create_calc_geyser_stakes,
     compare_token_rewards,
     combine_rewards,
     compare_rewards,
+    get_distributed,
     sum_rewards,
     get_rewards,
     rewards_to_integer,
     validate_rewards,
-    fetch_system_rewards,
-    play_system_rewards,
+    reduce_system_actions,
+    play_system_actions,
     validate_distributed,
     compare_distributed,
     rewards_to_fixed,

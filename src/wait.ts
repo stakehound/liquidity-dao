@@ -105,12 +105,12 @@ const wait_for_next_proposed = async (
         _.isEqual(last, lastConfirmed),
         "wait_for_next_proposed: multiple proposed in short period - are two proposers running?"
     );
-    const lastPublished = await multiplexer.lastPublishedMerkleData();
+    const publishNow = await multiplexer.lastPublishedMerkleData();
     assert(
-        last.cycle > lastPublished.cycle,
+        last.cycle > publishNow.cycle,
         "wait_for_next_proposed: last published and last confirmed are the same - is approver running too aggressively, or are there two approvers?"
     );
-    return { publishNow: lastPublished, lastPropose: last, block: proposeBlock };
+    return { publishNow, lastPropose: last, block: proposeBlock };
 };
 
 export { wait_for_block, wait_for_next_proposed, wait_for_time, sleep };

@@ -1,6 +1,6 @@
 import { BigNumber } from "bignumber.js";
 
-interface StakehoundConfig {
+interface GeyserConfig {
     // startMultiplier: BigNumber;
     // endMultiplier: BigNumber;
     globalStartTime: number;
@@ -42,4 +42,4 @@ interface StakehoundConfig {
     // )
 }
 
-export { StakehoundConfig };
+export { GeyserConfig };

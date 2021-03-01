@@ -81,9 +81,6 @@ describe("Stakehound", function () {
             initDistribution: {
                 cycle: 0,
                 rewards: {},
-                rewardsDistributed: {},
-                rewardsDistributedInRange: {},
-                rewardsInRange: {},
                 users: {},
             },
             signer: signers[0],
@@ -105,7 +102,7 @@ describe("Stakehound", function () {
             method: "evm_increaseTime",
             params: [30],
         });
-        for (let i = 0; i < 150; i++) {
+        for (let i = 0; i < 180; i++) {
             await HRE.network.provider.request({
                 method: "evm_mine",
             });
@@ -118,7 +115,7 @@ describe("Stakehound", function () {
             method: "evm_setNextBlockTimestamp",
             params: [startBlock.timestamp + 60 * 60 * 24 * 2],
         });
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < 180; i++) {
             await HRE.network.provider.request({
                 method: "evm_mine",
             });
@@ -137,13 +134,13 @@ describe("Stakehound", function () {
             method: "evm_increaseTime",
             params: [30],
         });
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < 180; i++) {
             await HRE.network.provider.request({
                 method: "evm_mine",
             });
         }
         const b = await bp;
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < 180; i++) {
             await HRE.network.provider.request({
                 method: "evm_mine",
             });
@@ -157,7 +154,7 @@ describe("Stakehound", function () {
             method: "evm_increaseTime",
             params: [30],
         });
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < 180; i++) {
             await HRE.network.provider.request({
                 method: "evm_mine",
             });
@@ -204,13 +201,11 @@ describe("Stakehound", function () {
             params: [wtime],
         });
         await sleep(2000);
-        let p: Promise<any> = Promise.resolve();
         for (let i = 0; i < 40; i++) {
             await HRE.network.provider.request({
                 method: "evm_mine",
             });
         }
-        await p;
         const wb = await wp;
         expect(wb.timestamp).to.gte(wtime);
     });
