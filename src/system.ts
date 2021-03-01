@@ -31,6 +31,7 @@ interface StakehoundContext {
         accessKeyId: string;
         secretAccessKey: string;
     };
+    stTokens: string[];
     signer: Signer;
     epoch: number;
 }
@@ -75,7 +76,7 @@ const force_propose = async (context: StakehoundContext, proposer: Signer) => {
         validate_rewards(rewards),
         "force_rewards: new calculated rewards with init distribution did not validate"
     );
-    const merkle = MultiMerkle.fromRewards(rewards);
+    const merkle = MultiMerkle.fromRewards(context.stTokens, rewards);
     assert(
         _.keys(merkle.merkleRewards.claims).length > 0,
         "force_rewards: no claims, either no staking or too early"
@@ -143,7 +144,7 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
         validate_rewards(rewards),
         "init_rewards: new calculated rewards with init distribution did not validate"
     );
-    const merkle = MultiMerkle.fromRewards(rewards);
+    const merkle = MultiMerkle.fromRewards(context.stTokens, rewards);
     assert(
         _.keys(merkle.merkleRewards.claims).length > 0,
         "init_rewards: no claims, either no staking or too early"
@@ -264,7 +265,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         validate_rewards(calcLastRewards),
         "bump_rewards: validate last rewards with initial distribution failed"
     );
-    const calcMerkle = MultiMerkle.fromRewards(calcLastRewards);
+    const calcMerkle = MultiMerkle.fromRewards(context.stTokens, calcLastRewards);
     assert(
         calcMerkle.root === proposed.root,
         "bump_rewards last reward root and calculated reward root failed to match"
@@ -291,7 +292,7 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         validate_rewards(newWithInit),
         "bump_rewards: new calculated rewards with init distribution did not validate"
     );
-    const merkle = MultiMerkle.fromRewards(newWithInit);
+    const merkle = MultiMerkle.fromRewards(context.stTokens, newWithInit);
     await upload_rewards(s3, merkle.merkleRewards);
     logger.info(
         `Bump: Proposed cycle ${merkle.merkleRewards.cycle} merkle root ${merkle.merkleRewards.merkleRoot}`
@@ -423,7 +424,7 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         validate_rewards(calcedRewards),
         "approve_rewards: calculated rewards with init distribution did not validate"
     );
-    const merkle = MultiMerkle.fromRewards(calcedRewards);
+    const merkle = MultiMerkle.fromRewards(context.stTokens, calcedRewards);
     const fetchedRewards = await fetch_rewards(s3, proposed.root);
 
     assert(

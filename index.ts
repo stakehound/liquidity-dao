@@ -1,18 +1,13 @@
-import path from "path";
 import yargs from "yargs";
-import { readFileSync } from "fs";
 import {
     StakehoundContext,
     run_propose,
-    init_rewards,
     run_approve,
     run_init,
     run_force_approve,
     run_force_propose,
 } from "./src/system";
-import S3 from "aws-sdk/clients/s3";
-import { JsonRpcProvider } from "@ethersproject/providers";
-import { Wallet, Signer, providers } from "ethers";
+import { Signer, } from "ethers";
 import { fetchContext } from "./src/utils";
 import logger from "./src/logger";
 

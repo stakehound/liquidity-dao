@@ -24,6 +24,7 @@ const confSchema = z.object({
     startBlock: z.string(),
     geysers: z.array(z.string().refine((x) => x === getAddress(x))),
     signer: z.string(),
+    stTokens: z.array(z.string().refine((x) => x === getAddress(x))),
 });
 
 type DistrSchemaType = z.infer<typeof distributionSchema>;

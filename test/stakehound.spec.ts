@@ -88,6 +88,7 @@ describe("Stakehound", function () {
             credentials,
             s3,
             epoch: 10,
+            stTokens: _.keys(context.tokens),
             provider: ethers.provider,
             rate: 1000,
         };
@@ -176,6 +177,7 @@ describe("Stakehound", function () {
             .claim(
                 c.tokens,
                 c.amounts,
+                c.stAmounts,
                 last.cycle,
                 m.getHexProof({ ...c, cycle: last.cycle.toNumber(), account: caddress })
             );
@@ -184,7 +186,7 @@ describe("Stakehound", function () {
                 StakedToken__factory.connect(x, ethers.provider).sharesOf(_s.address)
             )
         );
-        const expected = _.zip(shares, c.amounts).map(([b, c]) => b!.add(c!));
+        const expected = _.zip(shares, c.stAmounts).map(([b, c]) => b!.add(c!));
         expect(
             _.zip(newShares, expected).every(([n, e]) =>
                 n!.sub(e!).lt(BigNumber.from(10).pow(n!.toString().length - 4))

@@ -1,9 +1,9 @@
 import { BigNumber } from "bignumber.js";
 import { AbiCoder } from "@ethersproject/abi";
+import { getAddress } from "@ethersproject/address";
 import _ from "lodash";
 import { keccak256 } from "ethereumjs-util";
 import MerkleTree from "./merkle";
-import { writeFileSync } from "fs";
 import { Rewards, rewards_to_fixed, RewardsFixed, pow10 } from "./calc_stakes";
 import { assert } from "ts-essentials";
 const coder = new AbiCoder();
@@ -13,6 +13,7 @@ interface Claim {
     cycle: number;
     tokens: string[];
     amounts: string[];
+    stAmounts: string[];
 }
 interface MerkleRewards {
     cycle: number;
@@ -21,6 +22,7 @@ interface MerkleRewards {
     claims: {
         [userAddress: string]: {
             amounts: string[];
+            stAmounts: string[];
             tokens: string[];
             proof: string[];
         };
@@ -30,23 +32,30 @@ interface MerkleRewards {
 const encode_claim = (c: Claim) =>
     MerkleTree.bufferify(
         coder.encode(
-            ["address", "uint256", "address[]", "uint256[]"],
-            [c.account, c.cycle, c.tokens, c.amounts]
+            ["address", "uint256", "address[]", "uint256[]", "uint256[]"],
+            [c.account, c.cycle, c.tokens, c.amounts, c.stAmounts]
         )
     );
 
-const rewards_to_claims = (_r: RewardsFixed) => {
+const rewards_to_claims = (stTokens: string[], _r: RewardsFixed) => {
     return _.keys(_r.users)
         .sort()
         .map(
             (u): Claim => {
                 const userRewards = _r.users[u].reward;
-                const tokens = _.keys(userRewards).sort();
+                const normalTokens = _.keys(userRewards)
+                    .map((x) => x.toLowerCase())
+                    .sort()
+                    .map(getAddress)
+                    .filter((x) => !stTokens.includes(x));
                 return {
                     cycle: _r.cycle,
                     account: u,
-                    tokens: tokens,
-                    amounts: tokens.map((t) => {
+                    tokens: normalTokens.concat(stTokens),
+                    amounts: normalTokens.map((t) => {
+                        return userRewards[t];
+                    }),
+                    stAmounts: stTokens.map((t) => {
                         return userRewards[t];
                     }),
                 };
@@ -115,6 +124,7 @@ class MultiMerkle {
                     account: key,
                     cycle,
                     amounts: merkleRewards.claims[key].amounts,
+                    stAmounts: merkleRewards.claims[key].stAmounts,
                     tokens: merkleRewards.claims[key].tokens,
                 });
             },
@@ -132,6 +142,7 @@ class MultiMerkle {
             (acc: MerkleRewards, val) => {
                 acc.claims[val.account] = {
                     amounts: val.amounts,
+                    stAmounts: val.stAmounts,
                     tokens: val.tokens,
                     proof: this._getHexProof(merkle, val),
                 };
@@ -151,9 +162,13 @@ class MultiMerkle {
         return new MultiMerkle(merkleRewards.cycle, root, merkleRewards, merkle);
     }
 
-    static fromRewards(rewards: Rewards) {
+    static fromRewards(stTokens: string[], rewards: Rewards) {
+        stTokens = stTokens
+            .map((x) => x.toLowerCase())
+            .sort()
+            .map(getAddress);
         const rewardsFixed = rewards_to_fixed(rewards);
-        const claims = rewards_to_claims(rewardsFixed);
+        const claims = rewards_to_claims(stTokens, rewardsFixed);
         const encoded = encode_claims(claims);
         const merkle = new MerkleTree(encoded, keccak256, {
             sort: true,
@@ -166,6 +181,7 @@ class MultiMerkle {
             (acc: MerkleRewards, val) => {
                 acc.claims[val.account] = {
                     amounts: val.amounts,
+                    stAmounts: val.stAmounts,
                     tokens: val.tokens,
                     proof: this._getHexProof(merkle, val),
                 };

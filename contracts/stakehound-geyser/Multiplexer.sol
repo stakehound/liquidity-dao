@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/cryptography/MerkleProofUpgradeable.sol";
@@ -13,7 +14,7 @@ import "interfaces/stakehound/IStakedToken.sol";
 
 contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMultiTokenMerkleDistributor, PausableUpgradeable {
     using SafeMathUpgradeable for uint256;
-
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     event RootProposed(uint256 cycle, bytes32 root, bytes32 contentHash, uint256 endBlock);
     event RootValidated(uint256 cycle, bytes32 root, bytes32 contentHash, uint256 endBlock);
 
@@ -100,28 +101,35 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
     function encodeClaim(
         address[] calldata tokens,
         uint256[] calldata cumulativeAmounts,
+        uint256[] calldata cumulativeStAmounts,
         address account,
         uint256 cycle
     ) public view returns (bytes memory encoded, bytes32 hash) {
-        encoded = abi.encode(account, cycle, tokens, cumulativeAmounts);
+        encoded = abi.encode(account, cycle, tokens, cumulativeAmounts, cumulativeStAmounts);
         hash = keccak256(encoded);
     }
 
     /// @notice Claim accumulated rewards for a set of tokens at a given cycle number
+    /// @notice First part of tokens are normal ERC20, second part of tokens are stTokens
     function claim(
         address[] calldata tokens,
         uint256[] calldata cumulativeAmounts,
+        uint256[] calldata cumulativeStAmounts,
         uint256 cycle,
         bytes32[] calldata merkleProof
     ) external whenNotPaused {
         require(cycle == lastPublishedMerkleData.cycle, "Invalid cycle");
-
-        // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encode(msg.sender, cycle, tokens, cumulativeAmounts));
-        require(MerkleProofUpgradeable.verify(merkleProof, lastPublishedMerkleData.root, node), "Invalid proof");
-
+        {
+            // Fix stack too deep
+            // Verify the merkle proof.
+            bytes32 node = keccak256(abi.encode(msg.sender, cycle, tokens, cumulativeAmounts, cumulativeStAmounts));
+            require(MerkleProofUpgradeable.verify(merkleProof, lastPublishedMerkleData.root, node), "Invalid proof");
+        }
         // Claim each token
-        for (uint256 i = 0; i < tokens.length; i++) {
+        uint256 i = 0;
+        uint256 end = cumulativeAmounts.length;
+        // First we claim the normal ERC20 tokens
+        for (; i < end; i++) {
             uint256 claimable = cumulativeAmounts[i].sub(claimed[msg.sender][tokens[i]]);
 
             require(claimable > 0, "Excessive claim");
@@ -129,7 +137,20 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
             claimed[msg.sender][tokens[i]] = claimed[msg.sender][tokens[i]].add(claimable);
 
             require(claimed[msg.sender][tokens[i]] == cumulativeAmounts[i], "Claimed amount mismatch");
-            require(IERC20Upgradeable(tokens[i]).transfer(msg.sender, valueFromShares(tokens[i], claimable)), "Transfer failed");
+            IERC20Upgradeable(tokens[i]).safeTransfer(msg.sender, claimable);
+
+            emit Claimed(msg.sender, tokens[i], claimable, cycle, now, block.number);
+        }
+        end += cumulativeStAmounts.length;
+        for (; i < end; i++) {
+            uint256 claimable = cumulativeStAmounts[i].sub(claimed[msg.sender][tokens[i]]);
+
+            require(claimable > 0, "Excessive claim");
+
+            claimed[msg.sender][tokens[i]] = claimed[msg.sender][tokens[i]].add(claimable);
+
+            require(claimed[msg.sender][tokens[i]] == cumulativeStAmounts[i], "Claimed amount mismatch");
+            IERC20Upgradeable(tokens[i]).safeTransfer(msg.sender, valueFromShares(tokens[i], claimable));
 
             emit Claimed(msg.sender, tokens[i], claimable, cycle, now, block.number);
         }

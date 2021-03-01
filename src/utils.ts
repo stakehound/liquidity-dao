@@ -48,6 +48,7 @@ const fetchContext = async (configPath: string): Promise<StakehoundContext> => {
         signer,
         provider,
         s3,
+        stTokens: conf.stTokens,
         multiplexer,
     };
 };

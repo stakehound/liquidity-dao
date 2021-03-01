@@ -28,9 +28,9 @@ interface MultiplexerInterface extends ethers.utils.Interface {
     "ROOT_VALIDATOR_ROLE()": FunctionFragment;
     "UNPAUSER_ROLE()": FunctionFragment;
     "approveRoot(bytes32,bytes32,uint256,uint256)": FunctionFragment;
-    "claim(address[],uint256[],uint256,bytes32[])": FunctionFragment;
+    "claim(address[],uint256[],uint256[],uint256,bytes32[])": FunctionFragment;
     "claimed(address,address)": FunctionFragment;
-    "encodeClaim(address[],uint256[],address,uint256)": FunctionFragment;
+    "encodeClaim(address[],uint256[],uint256[],address,uint256)": FunctionFragment;
     "getClaimedFor(address,address[])": FunctionFragment;
     "getCurrentMerkleData()": FunctionFragment;
     "getPendingMerkleData()": FunctionFragment;
@@ -78,7 +78,13 @@ interface MultiplexerInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "claim",
-    values: [string[], BigNumberish[], BigNumberish, BytesLike[]]
+    values: [
+      string[],
+      BigNumberish[],
+      BigNumberish[],
+      BigNumberish,
+      BytesLike[]
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "claimed",
@@ -86,7 +92,7 @@ interface MultiplexerInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "encodeClaim",
-    values: [string[], BigNumberish[], string, BigNumberish]
+    values: [string[], BigNumberish[], BigNumberish[], string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getClaimedFor",
@@ -318,14 +324,16 @@ export class Multiplexer extends Contract {
     claim(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       cycle: BigNumberish,
       merkleProof: BytesLike[],
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "claim(address[],uint256[],uint256,bytes32[])"(
+    "claim(address[],uint256[],uint256[],uint256,bytes32[])"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       cycle: BigNumberish,
       merkleProof: BytesLike[],
       overrides?: Overrides
@@ -346,14 +354,16 @@ export class Multiplexer extends Contract {
     encodeClaim(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       account: string,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string, string] & { encoded: string; hash: string }>;
 
-    "encodeClaim(address[],uint256[],address,uint256)"(
+    "encodeClaim(address[],uint256[],uint256[],address,uint256)"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       account: string,
       cycle: BigNumberish,
       overrides?: CallOverrides
@@ -637,14 +647,16 @@ export class Multiplexer extends Contract {
   claim(
     tokens: string[],
     cumulativeAmounts: BigNumberish[],
+    cumulativeStAmounts: BigNumberish[],
     cycle: BigNumberish,
     merkleProof: BytesLike[],
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "claim(address[],uint256[],uint256,bytes32[])"(
+  "claim(address[],uint256[],uint256[],uint256,bytes32[])"(
     tokens: string[],
     cumulativeAmounts: BigNumberish[],
+    cumulativeStAmounts: BigNumberish[],
     cycle: BigNumberish,
     merkleProof: BytesLike[],
     overrides?: Overrides
@@ -665,14 +677,16 @@ export class Multiplexer extends Contract {
   encodeClaim(
     tokens: string[],
     cumulativeAmounts: BigNumberish[],
+    cumulativeStAmounts: BigNumberish[],
     account: string,
     cycle: BigNumberish,
     overrides?: CallOverrides
   ): Promise<[string, string] & { encoded: string; hash: string }>;
 
-  "encodeClaim(address[],uint256[],address,uint256)"(
+  "encodeClaim(address[],uint256[],uint256[],address,uint256)"(
     tokens: string[],
     cumulativeAmounts: BigNumberish[],
+    cumulativeStAmounts: BigNumberish[],
     account: string,
     cycle: BigNumberish,
     overrides?: CallOverrides
@@ -948,14 +962,16 @@ export class Multiplexer extends Contract {
     claim(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       cycle: BigNumberish,
       merkleProof: BytesLike[],
       overrides?: CallOverrides
     ): Promise<void>;
 
-    "claim(address[],uint256[],uint256,bytes32[])"(
+    "claim(address[],uint256[],uint256[],uint256,bytes32[])"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       cycle: BigNumberish,
       merkleProof: BytesLike[],
       overrides?: CallOverrides
@@ -976,14 +992,16 @@ export class Multiplexer extends Contract {
     encodeClaim(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       account: string,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string, string] & { encoded: string; hash: string }>;
 
-    "encodeClaim(address[],uint256[],address,uint256)"(
+    "encodeClaim(address[],uint256[],uint256[],address,uint256)"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       account: string,
       cycle: BigNumberish,
       overrides?: CallOverrides
@@ -1309,14 +1327,16 @@ export class Multiplexer extends Contract {
     claim(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       cycle: BigNumberish,
       merkleProof: BytesLike[],
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    "claim(address[],uint256[],uint256,bytes32[])"(
+    "claim(address[],uint256[],uint256[],uint256,bytes32[])"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       cycle: BigNumberish,
       merkleProof: BytesLike[],
       overrides?: Overrides
@@ -1337,14 +1357,16 @@ export class Multiplexer extends Contract {
     encodeClaim(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       account: string,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    "encodeClaim(address[],uint256[],address,uint256)"(
+    "encodeClaim(address[],uint256[],uint256[],address,uint256)"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       account: string,
       cycle: BigNumberish,
       overrides?: CallOverrides
@@ -1564,14 +1586,16 @@ export class Multiplexer extends Contract {
     claim(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       cycle: BigNumberish,
       merkleProof: BytesLike[],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "claim(address[],uint256[],uint256,bytes32[])"(
+    "claim(address[],uint256[],uint256[],uint256,bytes32[])"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       cycle: BigNumberish,
       merkleProof: BytesLike[],
       overrides?: Overrides
@@ -1592,14 +1616,16 @@ export class Multiplexer extends Contract {
     encodeClaim(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       account: string,
       cycle: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    "encodeClaim(address[],uint256[],address,uint256)"(
+    "encodeClaim(address[],uint256[],uint256[],address,uint256)"(
       tokens: string[],
       cumulativeAmounts: BigNumberish[],
+      cumulativeStAmounts: BigNumberish[],
       account: string,
       cycle: BigNumberish,
       overrides?: CallOverrides

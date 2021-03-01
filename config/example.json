@@ -4,6 +4,7 @@
     "initDistributionPath": "./initDistribution.json",
     "signer": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "geysers": [],
+    "stTokens": [],
     "credentials": {
         "accessKeyId": "access",
         "secretAccessKey": "secretaccess"
