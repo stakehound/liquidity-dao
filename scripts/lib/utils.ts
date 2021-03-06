@@ -107,13 +107,13 @@ const signal_token_locks = async (
 const add_distribution_tokens = async (
     signer: Signer,
     geysers: GeysersMap,
-    tokens: TokensMap
+    tokens: string[]
 ) => {
     const txs = await Promise.all(
         _.map(geysers, (geyser) =>
             Promise.all(
-                _.values(tokens).map((token) =>
-                    geyser.populateTransaction.addDistributionToken(token.address)
+                tokens.map((token) =>
+                    geyser.populateTransaction.addDistributionToken(token)
                 )
             )
         )

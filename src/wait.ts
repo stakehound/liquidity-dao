@@ -17,6 +17,54 @@ const sleep = (ms: number, loud: boolean = true) =>
         }, ms);
     });
 
+const wait_for_confirmations = async (
+    provider: Provider,
+    txHash: string,
+    logMethod?: string
+) => {
+    let sevenR: () => void;
+    const seven = new Promise<void>(function (res, rej) {
+        sevenR = res;
+    });
+    const thirty = new Promise<void>(async function (res, rej) {
+        let confirmations = 0;
+        while (confirmations < 30) {
+            try {
+                const txr = await provider.getTransaction(txHash);
+
+                confirmations = txr.confirmations;
+                // .then((x) => x.confirmations);
+                if (confirmations >= 7) {
+                    logger.info(
+                        `${logMethod ? logMethod + ": " : ""}Mined into block ${
+                            txr.confirmations
+                        } block hash ${
+                            txr.blockHash
+                        } tx hash ${txHash} with 7 confirmations`
+                    );
+
+                    sevenR!();
+                }
+                if (confirmations >= 30) {
+                    logger.info(
+                        `${logMethod ? logMethod + ": " : ""}Mined into block ${
+                            txr.confirmations
+                        } block hash ${
+                            txr.blockHash
+                        } tx hash ${txHash} with 30 confirmations`
+                    );
+                    res();
+                }
+                await sleep(10000);
+            } catch (e) {
+                logger.error(`wait_for_confirmations: ${e}`);
+            }
+        }
+    });
+
+    return { seven, thirty };
+};
+
 const wait_for_block = async (
     provider: Provider,
     blockNumber: number,
@@ -113,4 +161,10 @@ const wait_for_next_proposed = async (
     return { publishNow, lastPropose: last, block: proposeBlock };
 };
 
-export { wait_for_block, wait_for_next_proposed, wait_for_time, sleep };
+export {
+    wait_for_block,
+    wait_for_next_proposed,
+    wait_for_time,
+    sleep,
+    wait_for_confirmations,
+};

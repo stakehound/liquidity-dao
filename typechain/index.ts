@@ -2,6 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { OwnableUpgradeSafe } from "./OwnableUpgradeSafe";
+export type { ERC20UpgradeSafe } from "./ERC20UpgradeSafe";
 export type { IERC20 } from "./IERC20";
 export type { PausableUpgradeSafe } from "./PausableUpgradeSafe";
 export type { AccessControlUpgradeable } from "./AccessControlUpgradeable";
@@ -11,15 +12,12 @@ export type { IERC20Upgradeable } from "./IERC20Upgradeable";
 export type { TokenTimelockUpgradeable } from "./TokenTimelockUpgradeable";
 export type { PausableUpgradeable } from "./PausableUpgradeable";
 export type { Ownable } from "./Ownable";
-export type { FixedPoint } from "./FixedPoint";
-export type { IUniswapV2Callee } from "./IUniswapV2Callee";
-export type { IUniswapV2Factory } from "./IUniswapV2Factory";
-export type { IUniswapV2Pair } from "./IUniswapV2Pair";
 export type { DownstreamCaller } from "./DownstreamCaller";
 export type { IERC20Detailed } from "./IERC20Detailed";
 export type { ForceEther } from "./ForceEther";
 export type { MerkleMock } from "./MerkleMock";
 export type { MockToken } from "./MockToken";
+export type { SampleToken } from "./SampleToken";
 export type { StakedToken } from "./StakedToken";
 export type { Multiplexer } from "./Multiplexer";
 export type { RewardsEscrow } from "./RewardsEscrow";
@@ -37,6 +35,7 @@ export type { IStakedToken } from "./IStakedToken";
 export type { IStakehoundGeyser } from "./IStakehoundGeyser";
 
 export { OwnableUpgradeSafe__factory } from "./factories/OwnableUpgradeSafe__factory";
+export { ERC20UpgradeSafe__factory } from "./factories/ERC20UpgradeSafe__factory";
 export { IERC20__factory } from "./factories/IERC20__factory";
 export { PausableUpgradeSafe__factory } from "./factories/PausableUpgradeSafe__factory";
 export { AccessControlUpgradeable__factory } from "./factories/AccessControlUpgradeable__factory";
@@ -46,15 +45,12 @@ export { IERC20Upgradeable__factory } from "./factories/IERC20Upgradeable__facto
 export { TokenTimelockUpgradeable__factory } from "./factories/TokenTimelockUpgradeable__factory";
 export { PausableUpgradeable__factory } from "./factories/PausableUpgradeable__factory";
 export { Ownable__factory } from "./factories/Ownable__factory";
-export { FixedPoint__factory } from "./factories/FixedPoint__factory";
-export { IUniswapV2Callee__factory } from "./factories/IUniswapV2Callee__factory";
-export { IUniswapV2Factory__factory } from "./factories/IUniswapV2Factory__factory";
-export { IUniswapV2Pair__factory } from "./factories/IUniswapV2Pair__factory";
 export { DownstreamCaller__factory } from "./factories/DownstreamCaller__factory";
 export { IERC20Detailed__factory } from "./factories/IERC20Detailed__factory";
 export { ForceEther__factory } from "./factories/ForceEther__factory";
 export { MerkleMock__factory } from "./factories/MerkleMock__factory";
 export { MockToken__factory } from "./factories/MockToken__factory";
+export { SampleToken__factory } from "./factories/SampleToken__factory";
 export { StakedToken__factory } from "./factories/StakedToken__factory";
 export { Multiplexer__factory } from "./factories/Multiplexer__factory";
 export { RewardsEscrow__factory } from "./factories/RewardsEscrow__factory";

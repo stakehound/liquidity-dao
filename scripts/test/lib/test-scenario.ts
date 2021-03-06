@@ -14,7 +14,11 @@ import { fetchConfig, get_pair } from "../../../src/utils";
 import { writeFileSync } from "fs";
 import { confSchema } from "../../../src/validations";
 import logger from "../../../src/logger";
-import { IERC20Detailed__factory } from "../../../typechain";
+import {
+    IERC20Detailed__factory,
+    SampleToken,
+    SampleToken__factory,
+} from "../../../typechain";
 import { TokensMap } from "../../../src/types";
 import {
     IUniswapV2Factory__factory,
@@ -62,6 +66,11 @@ const deploy_test_scenario = async (write_config: boolean = false) => {
         "stakers",
         await Promise.all(stakers.map((x) => x.getAddress()))
     );
+    const stf = (await ethers.getContractFactory(
+        "SampleToken"
+    )) as SampleToken__factory;
+    const sampleToken = await stf.deploy();
+    await sampleToken.deployed();
     const block = await ethers.provider.getBlock("latest");
     const WETH = await uniRouter.WETH();
     logger.info(`Global start block ${block.number} ${block.hash}`);
@@ -110,7 +119,11 @@ const deploy_test_scenario = async (write_config: boolean = false) => {
         await locker.getAddress()
     );
     logger.info(`geysers deployed`);
-    await add_distribution_tokens(deployer, geysers, tokens);
+    await add_distribution_tokens(
+        deployer,
+        geysers,
+        [sampleToken.address].concat(_.values(tokens).map((t) => t.address))
+    );
     logger.info(`add distribution tokens`);
     const multiplexer = await deploy_multiplexer(
         await deployer.getAddress(),
@@ -126,6 +139,7 @@ const deploy_test_scenario = async (write_config: boolean = false) => {
         conf.credentials = credentials;
         conf.providerUrl = process.env.CLI_RPC_URL!;
         conf.startBlock = block.hash;
+        conf.stTokens = _.keys(tokens)
 
         writeFileSync(
             "./config/config_proposer.json",
@@ -159,6 +173,7 @@ const deploy_test_scenario = async (write_config: boolean = false) => {
         locker,
         deployer,
         tokens,
+        sampleToken,
         multiplexer,
         geysers,
         newblock.timestamp,
@@ -169,6 +184,7 @@ const deploy_test_scenario = async (write_config: boolean = false) => {
     logger.info("Adding liquidity and staking it in geysers");
     await add_lp_and_stake(stakers, geysers);
     return {
+        sampleToken,
         locker,
         deployer,
         multiplexer,

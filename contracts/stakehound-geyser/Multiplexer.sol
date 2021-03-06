@@ -126,33 +126,36 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
             require(MerkleProofUpgradeable.verify(merkleProof, lastPublishedMerkleData.root, node), "Invalid proof");
         }
         // Claim each token
-        uint256 i = 0;
-        uint256 end = cumulativeAmounts.length;
+        uint256 cumALen = cumulativeAmounts.length;
         // First we claim the normal ERC20 tokens
-        for (; i < end; i++) {
-            uint256 claimable = cumulativeAmounts[i].sub(claimed[msg.sender][tokens[i]]);
+        for (uint256 i; i < cumALen; i++) {
+            address token = tokens[i];
+            uint256 cumAmt = cumulativeAmounts[i];
+            uint256 claimable = cumAmt.sub(claimed[msg.sender][token]);
 
             require(claimable > 0, "Excessive claim");
 
-            claimed[msg.sender][tokens[i]] = claimed[msg.sender][tokens[i]].add(claimable);
+            claimed[msg.sender][token] = claimed[msg.sender][token].add(claimable);
 
-            require(claimed[msg.sender][tokens[i]] == cumulativeAmounts[i], "Claimed amount mismatch");
-            IERC20Upgradeable(tokens[i]).safeTransfer(msg.sender, claimable);
+            require(claimed[msg.sender][token] == cumAmt, "Claimed amount mismatch");
+            IERC20Upgradeable(token).safeTransfer(msg.sender, claimable);
 
             emit Claimed(msg.sender, tokens[i], claimable, cycle, now, block.number);
         }
-        end += cumulativeStAmounts.length;
-        for (; i < end; i++) {
-            uint256 claimable = cumulativeStAmounts[i].sub(claimed[msg.sender][tokens[i]]);
+        uint256 cumStALen = cumulativeStAmounts.length;
+        for (uint256 i = 0; i < cumStALen; i++) {
+            address token = tokens[cumALen + i];
+            uint256 cumStAmt = cumulativeStAmounts[i];
+            uint256 claimable = cumStAmt.sub(claimed[msg.sender][token]);
 
             require(claimable > 0, "Excessive claim");
 
-            claimed[msg.sender][tokens[i]] = claimed[msg.sender][tokens[i]].add(claimable);
+            claimed[msg.sender][token] = claimed[msg.sender][token].add(claimable);
 
-            require(claimed[msg.sender][tokens[i]] == cumulativeStAmounts[i], "Claimed amount mismatch");
-            IERC20Upgradeable(tokens[i]).safeTransfer(msg.sender, valueFromShares(tokens[i], claimable));
+            require(claimed[msg.sender][token] == cumStAmt, "Claimed amount mismatch");
+            IERC20Upgradeable(token).safeTransfer(msg.sender, valueFromShares(token, claimable));
 
-            emit Claimed(msg.sender, tokens[i], claimable, cycle, now, block.number);
+            emit Claimed(msg.sender, token, claimable, cycle, now, block.number);
         }
     }
 

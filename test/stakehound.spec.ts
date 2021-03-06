@@ -167,9 +167,13 @@ describe("Stakehound", function () {
         const _s = signers[4];
         const caddress = _.keys(m.merkleRewards.claims).find((c) => c === _s.address)!;
         const c = m.merkleRewards.claims[caddress]!;
-        const shares = await Promise.all(
-            c.tokens.map((x) =>
-                StakedToken__factory.connect(x, ethers.provider).sharesOf(_s.address)
+        const allAmts = await Promise.all(
+            [context.sampleToken.balanceOf(_s.address)].concat(
+                proposeContext.stTokens.map((x) =>
+                    StakedToken__factory.connect(x, ethers.provider).sharesOf(
+                        _s.address
+                    )
+                )
             )
         );
         await multiplexer
@@ -181,14 +185,20 @@ describe("Stakehound", function () {
                 last.cycle,
                 m.getHexProof({ ...c, cycle: last.cycle.toNumber(), account: caddress })
             );
-        const newShares = await Promise.all(
-            c.tokens.map((x) =>
-                StakedToken__factory.connect(x, ethers.provider).sharesOf(_s.address)
+        const newAllAmtts = await Promise.all(
+            [context.sampleToken.balanceOf(_s.address)].concat(
+                proposeContext.stTokens.map((x) =>
+                    StakedToken__factory.connect(x, ethers.provider).sharesOf(
+                        _s.address
+                    )
+                )
             )
         );
-        const expected = _.zip(shares, c.stAmounts).map(([b, c]) => b!.add(c!));
+        const expected = _.zip(allAmts, c.amounts.concat(c.stAmounts)).map(([b, c]) =>
+            b!.add(c!)
+        );
         expect(
-            _.zip(newShares, expected).every(([n, e]) =>
+            _.zip(newAllAmtts, expected).every(([n, e]) =>
                 n!.sub(e!).lt(BigNumber.from(10).pow(n!.toString().length - 4))
             )
         ).to.eq(true);

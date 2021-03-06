@@ -8,6 +8,7 @@ import {
     IERC20__factory,
     IERC20Detailed__factory,
     StakehoundGeyser,
+    SampleToken,
 } from "../../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { BigNumber, Signer, PopulatedTransaction, BigNumberish } from "ethers";
@@ -253,9 +254,9 @@ const add_lp_and_stake = async (stakers: Signer[], geysers: GeysersMap) => {
                     return build_add_liquidity(staker, t0, t1, amt0, amt1);
                 })
             ).then((txs) =>
-                sign_transactions(staker, _.flatten(txs)).then((signed) =>
-                    send_transactions(staker.provider!, signed)
-                )
+                sign_transactions(staker, _.flatten(txs))
+                    .then((signed) => send_transactions(staker.provider!, signed))
+                    .then((txs) => _.last(txs)!.wait(1))
             )
         )
     );
@@ -276,6 +277,7 @@ const mint_and_signal = async (
     locker: Signer,
     minter: Signer,
     tokens: StakedTokensMap,
+    sampleToken: SampleToken,
     multiplexer: Multiplexer,
     geysers: GeysersMap,
     startTime: number,
@@ -285,6 +287,30 @@ const mint_and_signal = async (
     const toDistributePerGeyser = toDistribute.div(_.keys(geysers).length);
     const lockerTxns: PopulatedTransaction[] = [];
     const minterTxns: PopulatedTransaction[] = [];
+    const mintAmt = BigNumber.from(10)
+        .pow(await sampleToken.decimals())
+        .mul(toDistribute);
+    await sampleToken
+        .connect(minter)
+        .populateTransaction.mint(multiplexer.address, mintAmt)
+        .then((tx) => minterTxns.push(tx));
+    const signalAmt = BigNumber.from(10)
+        .pow(await sampleToken.decimals())
+        .mul(toDistributePerGeyser);
+
+    await Promise.all(
+        _.map(geysers, async (geyser) => {
+            await geyser
+                .connect(locker)
+                .populateTransaction.signalTokenLock(
+                    sampleToken.address,
+                    signalAmt,
+                    durationSec,
+                    startTime
+                )
+                .then((tx) => lockerTxns.push(tx));
+        })
+    );
     await Promise.all(
         _.map(tokens, async (token) => {
             const mintAmt = BigNumber.from(10)
@@ -295,7 +321,7 @@ const mint_and_signal = async (
                 .populateTransaction.mint(multiplexer.address, mintAmt)
                 .then((tx) => minterTxns.push(tx));
 
-            const stakeAmt = BigNumber.from(10)
+            const signalAmt = BigNumber.from(10)
                 .pow(await token.decimals())
                 .mul(toDistributePerGeyser);
             await Promise.all(
@@ -304,7 +330,7 @@ const mint_and_signal = async (
                         .connect(locker)
                         .populateTransaction.signalTokenLock(
                             token.address,
-                            await valueToShares(token, stakeAmt),
+                            await valueToShares(token, signalAmt),
                             durationSec,
                             startTime
                         )
