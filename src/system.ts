@@ -100,14 +100,6 @@ const force_propose = async (context: StakehoundContext, proposer: Signer) => {
     logger.info(`Force rewards: got txhash ${tx.hash}`);
     const { seven, thirty } = await wait_for_confirmations(context.provider, tx.hash, 'Force Propose');
 
-    // const seven = tx.wait(7).then((tx) => {
-    //     logger.info(
-    //         `Init: Mined into block ${tx.blockNumber} with hash ${tx.blockNumber}`
-    //     );
-    // });
-    // const thirty = tx.wait(30).then((tx) => {
-    //     logger.info(`Init: Reached thirty confirmations`);
-    // });
     return { seven, thirty, tx };
 };
 
@@ -173,14 +165,6 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
         "Init"
     );
 
-    // const seven = tx.wait(7).then((tx) => {
-    //     logger.info(
-    //         `Init: Mined into block ${tx.blockNumber} with hash ${tx.blockNumber}`
-    //     );
-    // });
-    // const thirty = tx.wait(30).then((tx) => {
-    //     logger.info(`Init: Reached thirty confirmations`);
-    // });
     return { seven, thirty, tx };
 };
 
@@ -320,17 +304,6 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         tx.hash,
         "Bump"
     );
-
-    // const seven = tx.wait(7).then((tx) => {
-    //     logger.info(
-    //         `Bump: Mined into block ${tx.blockNumber} with hash ${tx.blockHash}`
-    //     );
-    //     return tx;
-    // });
-    // const thirty = tx.wait(30).then(() => {
-    //     logger.info(`Bump: Reached thirty confirmations`);
-    //     return tx.wait(31).then((tx) => tx);
-    // });
     return { seven, thirty, tx };
 };
 
@@ -468,16 +441,6 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         "Approve"
     );
 
-    // const seven = tx.wait(7).then((txn) => {
-    //     logger.info(
-    //         `Approve: Mined into block ${txn.blockNumber} with hash ${txn.blockNumber} and 7 confirmations`
-    //     );
-    //     return txn;
-    // });
-    // const thirty = tx.wait(30).then(() => {
-    //     logger.info(`Approve: Reached thirty confirmations`);
-    //     return tx.wait(31).then((txn) => txn);
-    // });
     return { tx, seven, thirty };
 };
 
@@ -498,16 +461,6 @@ const force_approve = async (context: StakehoundContext, approver: Signer) => {
         tx.hash,
         "Force Approve"
     );
-    // const seven = tx.wait(7).then((txn) => {
-    //     logger.info(
-    //         `Approve: Mined into block ${txn.blockNumber} with hash ${txn.blockNumber} and 7 confirmations`
-    //     );
-    //     return txn;
-    // });
-    // const thirty = tx.wait(30).then(() => {
-    //     logger.info(`Force Approve: Reached thirty confirmations`);
-    //     return tx.wait(31).then((txn) => txn);
-    // });
     return { tx, seven, thirty };
 };
 

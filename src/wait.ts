@@ -28,27 +28,28 @@ const wait_for_confirmations = async (
     });
     const thirty = new Promise<void>(async function (res, rej) {
         let confirmations = 0;
+        let sevenConfirmed = false;
         while (confirmations < 30) {
             try {
                 const txr = await provider.getTransaction(txHash);
 
                 confirmations = txr.confirmations;
                 // .then((x) => x.confirmations);
-                if (confirmations >= 7) {
+                if (confirmations >= 7 && !sevenConfirmed) {
                     logger.info(
                         `${logMethod ? logMethod + ": " : ""}Mined into block ${
-                            txr.confirmations
+                            txr.blockNumber
                         } block hash ${
                             txr.blockHash
                         } tx hash ${txHash} with 7 confirmations`
                     );
-
+                    sevenConfirmed = true;
                     sevenR!();
                 }
                 if (confirmations >= 30) {
                     logger.info(
                         `${logMethod ? logMethod + ": " : ""}Mined into block ${
-                            txr.confirmations
+                            txr.blockNumber
                         } block hash ${
                             txr.blockHash
                         } tx hash ${txHash} with 30 confirmations`
