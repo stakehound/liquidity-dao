@@ -70,7 +70,6 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
         _stakingToken = stakingToken_;
 
         globalStartTime = globalStartTime_;
-        // needs to be commented for tests
         emit Staked(address(0), 1, 1, globalStartTime_);
     }
 
@@ -168,7 +167,10 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     }
 
     /// ===== Permissioned Actions: Admins =====
-
+    /**
+     * @dev This function signals that token is permitted to be signaled via signalTokenLock
+     * @param token to distribute
+     */
     function addDistributionToken(address token) external {
         _onlyAdmin();
         distributionTokens.add(token);
@@ -179,7 +181,9 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     /**
      * @dev This funcion allows the contract owner to pledge more distribution tokens, along
      *      with the associated "unlock schedule". These locked tokens immediately begin unlocking
-     *      linearly over the duraction of durationSec timeframe.
+     *      over the duraction of durationSec timeframe. This *adds* to already existing schedules.
+     *      To update existing schedules, call clearSchedules first and then signal a new rewards schedule.
+     *      NB. This can produce retroactive rewards. To change, add a require(now <= block.timestamp);
      * @param token Token to lock.
      * @param amount Number of distribution tokens to lock. These are transferred from the caller.
      * @param durationSec Length of time to linear unlock the tokens.

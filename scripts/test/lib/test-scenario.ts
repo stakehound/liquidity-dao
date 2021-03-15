@@ -113,7 +113,7 @@ const deploy_test_scenario = async (write_config: boolean = false) => {
     );
     logger.info(`tokens deployed`);
     const geysers = await deploy_geysers(
-        lpTokens,
+        _.values(lpTokens).map((x) => x.address),
         block.timestamp,
         await deployer.getAddress(),
         await locker.getAddress()
@@ -139,7 +139,7 @@ const deploy_test_scenario = async (write_config: boolean = false) => {
         conf.credentials = credentials;
         conf.providerUrl = process.env.CLI_RPC_URL!;
         conf.startBlock = block.hash;
-        conf.stTokens = _.keys(tokens)
+        conf.stTokens = _.keys(tokens);
 
         writeFileSync(
             "./config/config_proposer.json",
