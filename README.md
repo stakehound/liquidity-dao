@@ -6,10 +6,7 @@ This runs on a loop, and will continue to work as long as the processes are runn
 
 ### Dependencies
 
--   Python 3.9
--   Node.js 10.x development environment (for Ganache).
--   [Eth-Brownie](https://eth-brownie.readthedocs.io/en/stable/install.html)
--   Ganache (v6.12.1)
+-   Node.js 10.x development environment (for Hardhat)
 
 ### Install
 
