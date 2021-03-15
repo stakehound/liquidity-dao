@@ -105,7 +105,7 @@ This is used to provide the initial distribution of tokens, if an airdrop is bei
 `rewards` is just a map of the users.
 
 
-### adding an airdrop
+### Adding an airdrop
 One must *add* the additional values to the initdistribution array. So if a user ends up getting airdropped more than they were before,
 the new airdrops should be added to the old.
 Then, one should run
@@ -202,7 +202,7 @@ multisig wallet.
 
 
 ### Multiplexer.sol roles
-ROOT_PROPOSER_ROLE - can propose new merkle roots (set in initializer)
-ROOT_VALIDATOR_ROLE - can approve new merkle roots (set in initializer)
-PAUSER_ROLE - can pause (not initialized)
-UNPAUSER_ROLE - can unpause (not initializer)
+- ROOT_PROPOSER_ROLE - can propose new merkle roots (set in initializer)
+- ROOT_VALIDATOR_ROLE - can approve new merkle roots (set in initializer)
+- PAUSER_ROLE - can pause (not initialized)
+- UNPAUSER_ROLE - can unpause (not initializer)
