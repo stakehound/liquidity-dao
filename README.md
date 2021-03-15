@@ -50,6 +50,7 @@ npx hardhat test
     "stTokens": ["0x1213534"]
 }
 ```
+
 - `startBlock` is the hash for the block from which to start fetching events
 - `multiplexer` is the deployed address for multiplexer contract
 - `geysers` is an array of addresses for geysers to listen to
@@ -60,23 +61,24 @@ npx hardhat test
 - `stTokens` These are the stakehound rebasing tokens which are being included in the rewards distribution. It is *important* to specify these, otherwise the script will pick it up and
 treat it as a normal ERC20.
 
-# To run an approver node
+
+### To run an approver node
 
 ```bash
 node dist/index.js approve --logfile ./approve.log config/config_approver.json
 ```
 
-# To run a proposer node
+### To run a proposer node
 
 ```bash
 node dist/index.js propose --logfile ./propose.log config/config_proposer.json
 ```
 
-# Force approve and force propose
+### Force approve and force propose
 This is used to propose and approve in the case of adding another merkle drop. This breaks the assertion checks for both, as a new initdistribution would cause
 previous reward distributions to not validate.
 
-# initDistribution
+### initDistribution
 
 ```json
 {
@@ -103,7 +105,7 @@ This is used to provide the initial distribution of tokens, if an airdrop is bei
 `rewards` is just a map of the users.
 
 
-# adding an airdrop
+### adding an airdrop
 One must *add* the additional values to the initdistribution array. So if a user ends up getting airdropped more than they were before,
 the new airdrops should be added to the old.
 Then, one should run
@@ -118,7 +120,7 @@ and
 node dist/index.js force-approve --logfile ./propose.log config/config_proposer.json
 ```
 
-# Deployment:
+### Deployment:
 Current deploy script is restricted towards a testing use case, however I provide some
 simple helper functions to be integrated into a deploy scenario.
 - scripts/lib/deploy.ts
@@ -152,9 +154,9 @@ simple helper functions to be integrated into a deploy scenario.
     )
     ```
 
-# Signaling and removing rewards
+### Signaling and removing rewards
 
-## StakehoundGeyser.sol
+#### StakehoundGeyser.sol
 
 ACL roles:
 DEFAULT_ADMIN_ROLE
@@ -199,7 +201,7 @@ multisig wallet.
 ```
 
 
-# Multiplexer.sol roles
+### Multiplexer.sol roles
 ROOT_PROPOSER_ROLE - can propose new merkle roots (set in initializer)
 ROOT_VALIDATOR_ROLE - can approve new merkle roots (set in initializer)
 PAUSER_ROLE - can pause (not initialized)
