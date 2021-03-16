@@ -183,7 +183,6 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
      *      with the associated "unlock schedule". These locked tokens immediately begin unlocking
      *      over the duraction of durationSec timeframe. This *adds* to already existing schedules.
      *      To update existing schedules, call clearSchedules first and then signal a new rewards schedule.
-     *      NB. This can produce retroactive rewards. To change, add a require(now <= block.timestamp);
      * @param token Token to lock.
      * @param amount Number of distribution tokens to lock. These are transferred from the caller.
      * @param durationSec Length of time to linear unlock the tokens.
@@ -197,6 +196,7 @@ contract StakehoundGeyser is Initializable, AccessControlUpgradeable {
     ) external {
         _onlyTokenLocker();
         require(startTime >= globalStartTime, "StakehoundGeyser: Schedule cannot start before global start time");
+        require(now <= startTime, "StakehoundGeyser: Schedule cannot start in the past");
         require(distributionTokens.contains(token), "StakehoundGeyser: Token not approved by admin");
 
         _signalTokenLock(token, amount, durationSec, startTime);

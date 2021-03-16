@@ -169,7 +169,6 @@ multisig wallet.
      * @dev This funcion allows the token locker to pledge more distribution tokens, along
      *      with the associated "unlock schedule". These locked tokens immediately begin unlocking
      *      linearly over the duraction of durationSec timeframe.
-     *      NB. This can produce retroactive rewards. To change, add a require(now <= block.timestamp);
      * @param token Token to lock.
      * @param amount Number of distribution tokens to lock. These are transferred from the caller.
      * @param durationSec Length of time to linear unlock the tokens.

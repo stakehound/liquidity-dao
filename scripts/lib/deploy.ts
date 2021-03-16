@@ -21,7 +21,7 @@ const deploy_geysers = async (
 ) => {
     let map: GeysersMap = {} as any;
     for (const t of _.values(tokens)) {
-        await deploy_geyser(t.address, startTime, admin, locker).then(
+        await deploy_geyser(t, startTime, admin, locker).then(
             (g) => (map[getAddress(g.address)] = g)
         );
     }
