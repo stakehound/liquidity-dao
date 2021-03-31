@@ -60,11 +60,11 @@ const unstake_all = async (con: DeployTestContext) => {
 };
 
 const clear_all = async (con: DeployTestContext) => {
-    const { locker, tokens, geysers } = con;
+    const { locker, tokens, geysers, sampleToken } = con;
     const txs = await Promise.all(
         _.map(geysers, (geyser) =>
             Promise.all(
-                _.map(tokens, (token, address) =>
+                _.map(_.keys(tokens).concat([sampleToken.address]), (address) =>
                     geyser.populateTransaction.clearSchedules(address)
                 )
             )

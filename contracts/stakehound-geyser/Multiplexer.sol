@@ -170,7 +170,8 @@ contract Multiplexer is Initializable, AccessControlUpgradeable, ICumulativeMult
     ) external whenNotPaused {
         _onlyRootProposer();
         require(cycle == lastPublishedMerkleData.cycle.add(1), "Incorrect cycle");
-        require(block.number.sub(endBlock) >= 30 && endBlock > lastProposedMerkleData.endBlock);
+        require(endBlock > lastProposedMerkleData.endBlock, "Cannot publish root with earlier end block");
+        require(block.number.sub(endBlock) >= 30, "Endblock must be at least 30 blocks behind");
         lastProposedMerkleData = MerkleData(root, contentHash, cycle, endBlock);
 
         emit RootProposed(cycle, root, contentHash, endBlock);

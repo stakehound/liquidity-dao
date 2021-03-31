@@ -1,5 +1,4 @@
 import _ from "lodash";
-import { Awaited } from "ts-essentials";
 import { Multiplexer } from "../typechain";
 import { Provider, Block } from "@ethersproject/providers";
 import { Signer } from "ethers";
@@ -95,10 +94,10 @@ const force_propose = async (context: StakehoundContext, proposer: Signer) => {
         merkle.root,
         merkle.cycle,
         end.number,
-        { gasLimit: 100000 }
+        { gasLimit: 300000 }
     );
-
     logger.info(`Force rewards: got txhash ${tx.hash}`);
+    await tx.wait(1).then((tx) => logger.info(`ForceRewards: gasPaid: ${tx.gasUsed}`));
     const { seven, thirty } = await wait_for_confirmations(
         context.provider,
         tx.hash,
@@ -161,10 +160,10 @@ const init_rewards = async (context: StakehoundContext, proposer: Signer) => {
         merkle.root,
         merkle.cycle,
         end.number,
-        { gasLimit: 100000 }
+        { gasLimit: 300000 }
     );
-
     logger.info(`Init: got txhash ${tx.hash}`);
+    await tx.wait(1).then((tx) => logger.info(`Init Propose: gasPaid: ${tx.gasUsed}`));
     const { seven, thirty } = await wait_for_confirmations(
         context.provider,
         tx.hash,
@@ -188,7 +187,6 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         blockTag: lastConfirmedBlock.number,
     });
     const lastEnd = await provider.getBlock(proposed.endBlock.toNumber());
-    console.log("fetch last");
     const fetchedLastRewards = await fetch_rewards(s3, proposed.root);
     const proposedNow = await multiplexer.lastProposedMerkleData();
     let publishedNow = await multiplexer.lastPublishedMerkleData();
@@ -303,9 +301,10 @@ const bump_rewards = async (context: StakehoundContext, proposer: Signer) => {
         merkle.root,
         merkle.cycle,
         lastConfirmedBlock.number,
-        { gasLimit: 100000 }
+        { gasLimit: 300000 }
     );
     logger.info(`Bump: got txHash ${tx.hash}`);
+    await tx.wait(1).then((tx) => logger.info(`Bump: gasPaid: ${tx.gasUsed}`));
     const { seven, thirty } = await wait_for_confirmations(
         context.provider,
         tx.hash,
@@ -440,9 +439,12 @@ const approve_rewards = async (context: StakehoundContext, approver: Signer) => 
         merkle.root,
         merkle.cycle,
         proposedEnd.number,
-        { gasLimit: 100000 }
+        { gasLimit: 300000 }
     );
     logger.info(`Approve: Got txhash ${tx.hash}`);
+
+    await tx.wait(1).then((tx) => logger.info(`Approve: gasPaid: ${tx.gasUsed}`));
+
     const { seven, thirty } = await wait_for_confirmations(
         context.provider,
         tx.hash,
@@ -462,9 +464,10 @@ const force_approve = async (context: StakehoundContext, approver: Signer) => {
         proposed.root,
         proposed.cycle,
         proposed.endBlock,
-        { gasLimit: 100000 }
+        { gasLimit: 300000 }
     );
     logger.info(`Force Approve: Got txhash ${tx.hash}`);
+    await tx.wait(1).then((tx) => logger.info(`Force Approve: gasPaid: ${tx.gasUsed}`));
     const { seven, thirty } = await wait_for_confirmations(
         context.provider,
         tx.hash,

@@ -62,7 +62,7 @@ describe("Stakehound", function () {
         context = await deploy_test_scenario();
         ({ multiplexer } = context);
     });
-    it("rewards type", async function () {
+    it("rewards script", async function () {
         this.timeout(100000);
         const { startBlock, proposer, approver } = context;
         await HRE.network.provider.request({
@@ -111,7 +111,6 @@ describe("Stakehound", function () {
         const i = await ip;
         const a = await ap;
         await Promise.all([a.tx.wait(1), i.tx.wait(1)]);
-        const lastpub = await multiplexer.lastPublishedMerkleData();
         await HRE.network.provider.request({
             method: "evm_setNextBlockTimestamp",
             params: [startBlock.timestamp + 60 * 60 * 24 * 2],
@@ -122,13 +121,6 @@ describe("Stakehound", function () {
             });
         }
         await Promise.all([a.thirty, i.thirty]);
-        // const waitP = wait_for_next_proposed(
-        //     ethers.provider,
-        //     multiplexer,
-        //     lastpub.endBlock.toNumber(),
-        //     lastpub.cycle.toNumber(),
-        //     1000
-        // );
         const ar1 = approve_rewards(proposeContext, approver);
         const bp = bump_rewards(proposeContext, proposer);
         await HRE.network.provider.request({
@@ -147,10 +139,6 @@ describe("Stakehound", function () {
             });
         }
         const a1 = await ar1;
-        //await [a1.tx.wait(1), b.tx.wait(1)];
-        //expect((await waitP).lastPropose.cycle.toNumber()).to.eq(
-        //    lastpub.cycle.toNumber() + 1
-        //);
         await HRE.network.provider.request({
             method: "evm_increaseTime",
             params: [30],
@@ -203,22 +191,22 @@ describe("Stakehound", function () {
             )
         ).to.eq(true);
     });
-    it("test wait_for_time", async function () {
-        this.timeout(100000);
-        const block = await ethers.provider.getBlock("latest");
-        const wtime = block.timestamp + 60 * 60 * 24;
-        const wp = wait_for_time(ethers.provider, wtime, 1000);
-        await HRE.network.provider.request({
-            method: "evm_setNextBlockTimestamp",
-            params: [wtime],
-        });
-        await sleep(2000);
-        for (let i = 0; i < 40; i++) {
-            await HRE.network.provider.request({
-                method: "evm_mine",
-            });
-        }
-        const wb = await wp;
-        expect(wb.timestamp).to.gte(wtime);
-    });
+    // it("test wait_for_time", async function () {
+    //     this.timeout(100000);
+    //     const block = await ethers.provider.getBlock("latest");
+    //     const wtime = block.timestamp + 60 * 60 * 24;
+    //     const wp = wait_for_time(ethers.provider, wtime, 1000);
+    //     await HRE.network.provider.request({
+    //         method: "evm_setNextBlockTimestamp",
+    //         params: [wtime],
+    //     });
+    //     await sleep(2000);
+    //     for (let i = 0; i < 40; i++) {
+    //         await HRE.network.provider.request({
+    //             method: "evm_mine",
+    //         });
+    //     }
+    //     const wb = await wp;
+    //     expect(wb.timestamp).to.gte(wtime);
+    // });
 });

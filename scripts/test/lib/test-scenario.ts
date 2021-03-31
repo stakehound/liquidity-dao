@@ -176,7 +176,7 @@ const deploy_test_scenario = async (write_config: boolean = false) => {
         sampleToken,
         multiplexer,
         geysers,
-        newblock.timestamp,
+        newblock.timestamp + 60,
         60 * 60 * 24 * 28
     ); // four weeks
     logger.info("Minting to stakers");
