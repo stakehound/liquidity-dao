@@ -30,3 +30,5 @@ deploy-1337final.json
 *.swp
 .openzeppelin
 config/config*
+
+artifacts/
