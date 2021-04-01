@@ -7,7 +7,7 @@ const upload_rewards = (s3: S3, rewards: MerkleRewards) => {
     const req: S3.PutObjectRequest = {
         Body: data,
         Key: `stakehound-rewards-${rewards.merkleRoot}.json`,
-        Bucket: "stakehound",
+        Bucket: process.env.S3_BUCKET_NAME || 'stakehound',
     };
     // call S3 to retrieve upload file to specified bucket
     return new Promise<void>((res, rej) =>
@@ -26,7 +26,7 @@ const upload_rewards = (s3: S3, rewards: MerkleRewards) => {
 const fetch_rewards = (s3: S3, merkleRoot: string) => {
     const req: S3.GetObjectRequest = {
         Key: `stakehound-rewards-${merkleRoot}.json`,
-        Bucket: "stakehound",
+        Bucket: process.env.S3_BUCKET_NAME || 'stakehound',
     };
     // call S3 to retrieve upload file to specified bucket
     return new Promise<MerkleRewards>((res, rej) =>
